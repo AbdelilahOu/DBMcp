@@ -29,7 +29,6 @@ func GetOrCreateSession(sessionID string, globalClient *client.DBClient) *DBSess
 	mu.Lock()
 	defer mu.Unlock()
 
-	// If no global client provided, create empty session that can be populated later
 	if globalClient == nil {
 		id := sessionID
 		if id == "" {
@@ -60,7 +59,6 @@ func GetOrCreateSession(sessionID string, globalClient *client.DBClient) *DBSess
 	return s
 }
 
-// GetSession returns an existing session without creating one
 func GetSession(sessionID string) *DBSessionState {
 	mu.RLock()
 	defer mu.RUnlock()

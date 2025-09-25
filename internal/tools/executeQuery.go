@@ -19,31 +19,23 @@ type ExecuteQueryOutput struct {
 	Message      string `json:"message" jsonschema_description:"Success message"`
 }
 
-func GetExecuteQueryTool(readOnly bool) *ToolDefinition[ExecuteQueryInput, ExecuteQueryOutput] {
+func GetExecuteQueryTool() *ToolDefinition[ExecuteQueryInput, ExecuteQueryOutput] {
 	return NewToolDefinition[ExecuteQueryInput, ExecuteQueryOutput](
 		"execute_query",
 		"Execute any SQL query (INSERT, UPDATE, DELETE, etc.) with proper permissions.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ExecuteQueryInput) (*mcp.CallToolResult, ExecuteQueryOutput, error) {
-			return executeQueryHandler(ctx, req, input, readOnly)
+			return executeQueryHandler(ctx, req, input)
 		},
 	)
 }
 
-func executeQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input ExecuteQueryInput, readOnly bool) (*mcp.CallToolResult, ExecuteQueryOutput, error) {
+func executeQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input ExecuteQueryInput) (*mcp.CallToolResult, ExecuteQueryOutput, error) {
 	sessionState, err := getActiveSession("default")
 	if err != nil {
 		return nil, ExecuteQueryOutput{}, err
 	}
 
 	queryLower := strings.ToLower(strings.TrimSpace(input.Query))
-	if strings.HasPrefix(queryLower, "select") {
-		return nil, ExecuteQueryOutput{}, fmt.Errorf("use execute_select tool for SELECT queries")
-	}
-
-	if readOnly {
-		return nil, ExecuteQueryOutput{}, fmt.Errorf("read-only mode: write operations are not allowed")
-	}
-
 	dangerousOperations := []string{"drop database", "drop schema", "truncate"}
 	for _, dangerous := range dangerousOperations {
 		if strings.Contains(queryLower, dangerous) {

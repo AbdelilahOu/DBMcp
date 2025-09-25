@@ -17,8 +17,7 @@ import (
 type MCPServerConfig struct {
 	Version           string
 	DBUrl             string
-	ReadOnly          bool
-	InitialConnection string // Optional: name of connection to initialize at startup
+	InitialConnection string
 }
 
 func NewMCPServer(cfg MCPServerConfig) (*mcp.Server, error) {
@@ -34,19 +33,16 @@ func NewMCPServer(cfg MCPServerConfig) (*mcp.Server, error) {
 		fmt.Printf("Successfully initialized connection: %s\n", cfg.InitialConnection)
 	}
 
-	// Register tools without requiring an active DB connection at startup
-	tools.RegisterTools(server, cfg.ReadOnly)
+	tools.RegisterTools(server)
 
 	return server, nil
 }
 
 type StdioServerConfig struct {
 	Version           string
-	ReadOnly          bool
-	InitialConnection string // Optional: name of connection to initialize at startup
+	InitialConnection string
 }
 
-// initializeConnection creates a database connection and sets it in the session state
 func initializeConnection(connectionName string) error {
 	if tools.GlobalConfig == nil {
 		cfg, err := config.LoadConfig()
@@ -85,7 +81,6 @@ func RunStdioServer(cfg StdioServerConfig) error {
 
 	server, err := NewMCPServer(MCPServerConfig{
 		Version:           cfg.Version,
-		ReadOnly:          cfg.ReadOnly,
 		InitialConnection: cfg.InitialConnection,
 	})
 
@@ -93,7 +88,6 @@ func RunStdioServer(cfg StdioServerConfig) error {
 		return fmt.Errorf("failed to create MCP server: %w", err)
 	}
 
-	fmt.Printf("DB MCP Server running (read-only: %t)...\n", cfg.ReadOnly)
-
+	fmt.Printf("DB MCP Server running ...\n")
 	return server.Run(ctx, &mcp.StdioTransport{})
 }

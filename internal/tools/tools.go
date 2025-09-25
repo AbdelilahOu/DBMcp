@@ -25,9 +25,7 @@ func getActiveSession(sessionID string) (*state.DBSessionState, error) {
 	return sessionState, nil
 }
 
-func RegisterTools(s *mcp.Server, readOnly bool) {
-	// Execute Select Tool
-	GetExecuteSelectTool(readOnly).Register(s)
+func RegisterTools(s *mcp.Server) {
 	// List Tables Tool
 	GetListTablesTool().Register(s)
 	// Describe Table Tool
@@ -35,9 +33,7 @@ func RegisterTools(s *mcp.Server, readOnly bool) {
 	// Get DB Info Tool
 	GetDbInfoTool().Register(s)
 	// Execute Query Tool (only if not read-only)
-	if !readOnly {
-		GetExecuteQueryTool(readOnly).Register(s)
-	}
+	GetExecuteQueryTool().Register(s)
 	// Explain Query Tool
 	GetExplainQueryTool().Register(s)
 	// Connection Management Tools (always available)

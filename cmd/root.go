@@ -37,7 +37,6 @@ func init() {
 
 func runStdioServer(cmd *cobra.Command, args []string) error {
 	connection, _ := cmd.Flags().GetString("connection")
-	readOnly, _ := cmd.Flags().GetBool("read-only")
 
 	var initialConnection string
 
@@ -70,7 +69,6 @@ func runStdioServer(cmd *cobra.Command, args []string) error {
 	}
 
 	return server.RunStdioServer(server.StdioServerConfig{
-		ReadOnly:          readOnly,
 		Version:           "v0.1.0",
 		InitialConnection: initialConnection,
 	})
