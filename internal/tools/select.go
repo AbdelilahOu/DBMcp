@@ -14,32 +14,27 @@ import (
 )
 
 func executeSelectHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb.ExecuteSelectInput, dbClient *client.DBClient, readOnly bool) (*mcp.CallToolResult, mcpdb.ExecuteSelectOutput, error) {
-	// Validate read-only
+
 	queryLower := strings.ToLower(input.Query)
 	if readOnly && !strings.HasPrefix(queryLower, "select") {
 		return nil, mcpdb.ExecuteSelectOutput{}, fmt.Errorf("read-only mode: only SELECT queries allowed")
 	}
 
-	// Get/create session state (key use case: reuse conn across multi-turn queries)
-	// Use a default session for simplicity
 	sessionID := "default"
 	state := state.GetOrCreateSession(sessionID, dbClient)
 	if state == nil || state.Conn == nil {
 		return nil, mcpdb.ExecuteSelectOutput{}, fmt.Errorf("no active DB connection in session")
 	}
 
-	// Timeout context (5s for safety)
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	// Exec query
 	rows, err := state.Conn.QueryContext(ctx, input.Query)
 	if err != nil {
 		return nil, mcpdb.ExecuteSelectOutput{}, fmt.Errorf("query error: %v", err)
 	}
 	defer rows.Close()
 
-	// Scan results to JSON (handles dynamic columns)
 	columns, err := rows.Columns()
 	if err != nil {
 		return nil, mcpdb.ExecuteSelectOutput{}, fmt.Errorf("columns error: %v", err)
@@ -47,7 +42,7 @@ func executeSelectHandler(ctx context.Context, req *mcp.CallToolRequest, input m
 
 	results := []map[string]interface{}{}
 	for rows.Next() {
-		// Use interface{} to handle different types dynamically
+
 		vals := make([]interface{}, len(columns))
 		valPtrs := make([]interface{}, len(columns))
 		for i := range vals {
@@ -61,10 +56,10 @@ func executeSelectHandler(ctx context.Context, req *mcp.CallToolRequest, input m
 		row := make(map[string]interface{})
 		for i, col := range columns {
 			val := vals[i]
-			// Handle different SQL types
+
 			switch v := val.(type) {
 			case []byte:
-				// Convert byte arrays to strings (common for text fields)
+
 				row[col] = string(v)
 			case nil:
 				row[col] = nil
@@ -75,7 +70,6 @@ func executeSelectHandler(ctx context.Context, req *mcp.CallToolRequest, input m
 		results = append(results, row)
 	}
 
-	// Marshal output
 	jsonBytes, err := json.Marshal(results)
 	if err != nil {
 		return nil, mcpdb.ExecuteSelectOutput{}, fmt.Errorf("JSON error: %v", err)

@@ -104,7 +104,7 @@ List all tables in the database with metadata.
 **Input:**
 ```json
 {
-  "schema": "public"  // optional
+  "schema": "public"
 }
 ```
 
@@ -128,7 +128,7 @@ Get detailed information about table structure, columns, and indexes.
 ```json
 {
   "table_name": "users",
-  "schema": "public"  // optional
+  "schema": "public"
 }
 ```
 
@@ -212,32 +212,6 @@ Get table statistics (row count, size, column stats).
 #### 10. generate_sample_data
 Generate sample data for testing purposes.
 
-## Development Roadmap
-
-### Phase 1: Configuration & Connection Management
-- [ ] Implement config file loading from standard locations
-- [ ] Add connection management with named connections
-- [ ] Update CLI to support `--connection` flag
-- [ ] Add connection validation and testing
-
-### Phase 2: Schema Introspection
-- [ ] Implement `list_tables` tool
-- [ ] Implement `describe_table` tool
-- [ ] Implement `get_db_info` tool
-- [ ] Add PostgreSQL and MySQL specific schema queries
-
-### Phase 3: Enhanced Query Support
-- [ ] Implement `execute_query` tool for all SQL operations
-- [ ] Add `explain_query` for query analysis
-- [ ] Improve error handling and validation
-- [ ] Add transaction support
-
-### Phase 4: Advanced Features
-- [ ] Connection pooling improvements
-- [ ] Query caching mechanisms
-- [ ] Performance monitoring
-- [ ] Audit logging
-
 ## Architecture
 
 ```
@@ -294,11 +268,3 @@ SELECT id, name, email, created_at FROM users ORDER BY created_at DESC LIMIT 10;
 DESCRIBE users;  -- MySQL
 \d users         -- PostgreSQL
 ```
-
-## License
-
-MIT License - see LICENSE file for details.
-
-## Support
-
-For issues and feature requests, please use the GitHub issue tracker.

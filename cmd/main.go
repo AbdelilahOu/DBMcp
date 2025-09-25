@@ -1,11 +1,11 @@
 package main
 
 import (
-	_ "github.com/go-sql-driver/mysql" // Register MySQL driver
-	_ "github.com/lib/pq"              // Register Postgres driver
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 )
 
 func main() {
-	// Bootstrap (Cobra handles CLI)
+
 	Execute()
 }

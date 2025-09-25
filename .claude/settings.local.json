@@ -1,0 +1,6 @@
+{
+  "enabledMcpjsonServers": [
+    "database"
+  ],
+  "enableAllProjectMcpServers": true
+}
