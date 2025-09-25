@@ -2,13 +2,9 @@
   "mcpServers": {
     "database": {
       "command": "C:\\Users\\abdel\\OneDrive\\Desktop\\Projects\\ai\\DBMcp\\bin\\db-mcp-server.exe",
-      "args": [
-        "stdio",
-        "--conn-string",
-        "postgresql://postgres:postgres@localhost:5432/woco360?sslmode=disable"
-      ],
+      "args": ["stdio", "--connection", "Woco360-PostgreSQL"],
       "env": {
-        "DB_CONN_STRING": "postgresql://postgres:postgres@localhost:5432/woco360?sslmode=disable"
+        "DB_CONN_STRING": "Woco360-PostgreSQL"
       }
     }
   }

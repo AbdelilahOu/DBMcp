@@ -148,17 +148,17 @@ func switchConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, inpu
 	}, output, nil
 }
 
-func GetTestConnectionTool(dbClient *client.DBClient) *ToolDefinition[TestConnectionInput, TestConnectionOutput] {
+func GetTestConnectionTool() *ToolDefinition[TestConnectionInput, TestConnectionOutput] {
 	return NewToolDefinition[TestConnectionInput, TestConnectionOutput](
 		"test_connection",
 		"Test connectivity to a database before executing queries.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input TestConnectionInput) (*mcp.CallToolResult, TestConnectionOutput, error) {
-			return testConnectionHandler(ctx, req, input, dbClient)
+			return testConnectionHandler(ctx, req, input)
 		},
 	)
 }
 
-func testConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, input TestConnectionInput, dbClient *client.DBClient) (*mcp.CallToolResult, TestConnectionOutput, error) {
+func testConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, input TestConnectionInput) (*mcp.CallToolResult, TestConnectionOutput, error) {
 	var connectionName string
 	var testClient *client.DBClient
 	var err error
@@ -196,8 +196,7 @@ func testConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, input 
 
 		connectionName = input.Connection
 	} else {
-		sessionID := "default"
-		sessionState := state.GetOrCreateSession(sessionID, dbClient)
+		sessionState := state.GetSession("default")
 		if sessionState == nil || sessionState.Conn == nil {
 			output := TestConnectionOutput{
 				Success:    false,

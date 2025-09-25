@@ -8,9 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AbdelilahOu/DBMcp/internal/client"
-	"github.com/AbdelilahOu/DBMcp/internal/state"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -23,21 +20,20 @@ type GetDBInfoOutput struct {
 	TableCount   int      `json:"table_count" jsonschema_description:"Total number of tables"`
 }
 
-func GetDbInfoTool(dbClient *client.DBClient) *ToolDefinition[GetDBInfoInput, GetDBInfoOutput] {
+func GetDbInfoTool() *ToolDefinition[GetDBInfoInput, GetDBInfoOutput] {
 	return NewToolDefinition[GetDBInfoInput, GetDBInfoOutput](
 		"get_db_info",
 		"Get general database information and statistics.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetDBInfoInput) (*mcp.CallToolResult, GetDBInfoOutput, error) {
-			return getDBInfoHandler(ctx, req, input, dbClient)
+			return getDBInfoHandler(ctx, req, input)
 		},
 	)
 }
 
-func getDBInfoHandler(ctx context.Context, req *mcp.CallToolRequest, input GetDBInfoInput, dbClient *client.DBClient) (*mcp.CallToolResult, GetDBInfoOutput, error) {
-	sessionID := "default"
-	sessionState := state.GetOrCreateSession(sessionID, dbClient)
-	if sessionState == nil || sessionState.Conn == nil {
-		return nil, GetDBInfoOutput{}, fmt.Errorf("no active DB connection in session")
+func getDBInfoHandler(ctx context.Context, req *mcp.CallToolRequest, input GetDBInfoInput) (*mcp.CallToolResult, GetDBInfoOutput, error) {
+	sessionState, err := getActiveSession("default")
+	if err != nil {
+		return nil, GetDBInfoOutput{}, err
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -52,7 +48,7 @@ func getDBInfoHandler(ctx context.Context, req *mcp.CallToolRequest, input GetDB
 	pgSchemasQuery := "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast')"
 	pgTableCountQuery := "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')"
 
-	err := sessionState.Conn.QueryRowContext(ctx, pgDbNameQuery).Scan(&dbName)
+	err = sessionState.Conn.QueryRowContext(ctx, pgDbNameQuery).Scan(&dbName)
 	if err != nil {
 		mysqlDbNameQuery := "SELECT DATABASE()"
 		mysqlVersionQuery := "SELECT VERSION()"

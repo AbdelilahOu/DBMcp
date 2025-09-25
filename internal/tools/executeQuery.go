@@ -7,9 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AbdelilahOu/DBMcp/internal/client"
-	"github.com/AbdelilahOu/DBMcp/internal/state"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -22,21 +19,20 @@ type ExecuteQueryOutput struct {
 	Message      string `json:"message" jsonschema_description:"Success message"`
 }
 
-func GetExecuteQueryTool(dbClient *client.DBClient, readOnly bool) *ToolDefinition[ExecuteQueryInput, ExecuteQueryOutput] {
+func GetExecuteQueryTool(readOnly bool) *ToolDefinition[ExecuteQueryInput, ExecuteQueryOutput] {
 	return NewToolDefinition[ExecuteQueryInput, ExecuteQueryOutput](
 		"execute_query",
 		"Execute any SQL query (INSERT, UPDATE, DELETE, etc.) with proper permissions.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ExecuteQueryInput) (*mcp.CallToolResult, ExecuteQueryOutput, error) {
-			return executeQueryHandler(ctx, req, input, dbClient, readOnly)
+			return executeQueryHandler(ctx, req, input, readOnly)
 		},
 	)
 }
 
-func executeQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input ExecuteQueryInput, dbClient *client.DBClient, readOnly bool) (*mcp.CallToolResult, ExecuteQueryOutput, error) {
-	sessionID := "default"
-	sessionState := state.GetOrCreateSession(sessionID, dbClient)
-	if sessionState == nil || sessionState.Conn == nil {
-		return nil, ExecuteQueryOutput{}, fmt.Errorf("no active DB connection in session")
+func executeQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input ExecuteQueryInput, readOnly bool) (*mcp.CallToolResult, ExecuteQueryOutput, error) {
+	sessionState, err := getActiveSession("default")
+	if err != nil {
+		return nil, ExecuteQueryOutput{}, err
 	}
 
 	queryLower := strings.ToLower(strings.TrimSpace(input.Query))

@@ -8,9 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AbdelilahOu/DBMcp/internal/client"
-	"github.com/AbdelilahOu/DBMcp/internal/state"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -28,21 +25,20 @@ type ListTablesOutput struct {
 	Tables []TableInfo `json:"tables" jsonschema_description:"Array of table information"`
 }
 
-func GetListTablesTool(dbClient *client.DBClient) *ToolDefinition[ListTablesInput, ListTablesOutput] {
+func GetListTablesTool() *ToolDefinition[ListTablesInput, ListTablesOutput] {
 	return NewToolDefinition[ListTablesInput, ListTablesOutput](
 		"list_tables",
 		"List all tables in the database with metadata.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListTablesInput) (*mcp.CallToolResult, ListTablesOutput, error) {
-			return listTablesHandler(ctx, req, input, dbClient)
+			return listTablesHandler(ctx, req, input)
 		},
 	)
 }
 
-func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input ListTablesInput, dbClient *client.DBClient) (*mcp.CallToolResult, ListTablesOutput, error) {
-	sessionID := "default"
-	sessionState := state.GetOrCreateSession(sessionID, dbClient)
-	if sessionState == nil || sessionState.Conn == nil {
-		return nil, ListTablesOutput{}, fmt.Errorf("no active DB connection in session")
+func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input ListTablesInput) (*mcp.CallToolResult, ListTablesOutput, error) {
+	sessionState, err := getActiveSession("default")
+	if err != nil {
+		return nil, ListTablesOutput{}, err
 	}
 
 	schema := input.Schema
@@ -53,7 +49,7 @@ func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input List
 	var query string
 
 	detectQuery := "SELECT 1 FROM information_schema.tables WHERE table_schema = 'information_schema' LIMIT 1"
-	_, err := sessionState.Conn.QueryContext(ctx, detectQuery)
+	_, err = sessionState.Conn.QueryContext(ctx, detectQuery)
 
 	if err != nil {
 		query = `

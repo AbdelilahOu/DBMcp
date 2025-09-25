@@ -7,9 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/AbdelilahOu/DBMcp/internal/client"
-	"github.com/AbdelilahOu/DBMcp/internal/state"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -32,21 +29,20 @@ type AnalyzeTableOutput struct {
 	Stats TableStats `json:"stats" jsonschema_description:"Table statistics"`
 }
 
-func GetAnalyzeTableTool(dbClient *client.DBClient) *ToolDefinition[AnalyzeTableInput, AnalyzeTableOutput] {
+func GetAnalyzeTableTool() *ToolDefinition[AnalyzeTableInput, AnalyzeTableOutput] {
 	return NewToolDefinition[AnalyzeTableInput, AnalyzeTableOutput](
 		"analyze_table",
 		"Get table statistics (row count, size, column stats).",
 		func(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeTableInput) (*mcp.CallToolResult, AnalyzeTableOutput, error) {
-			return analyzeTableHandler(ctx, req, input, dbClient)
+			return analyzeTableHandler(ctx, req, input)
 		},
 	)
 }
 
-func analyzeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeTableInput, dbClient *client.DBClient) (*mcp.CallToolResult, AnalyzeTableOutput, error) {
-	sessionID := "default"
-	sessionState := state.GetOrCreateSession(sessionID, dbClient)
-	if sessionState == nil || sessionState.Conn == nil {
-		return nil, AnalyzeTableOutput{}, fmt.Errorf("no active DB connection in session")
+func analyzeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeTableInput) (*mcp.CallToolResult, AnalyzeTableOutput, error) {
+	sessionState, err := getActiveSession("default")
+	if err != nil {
+		return nil, AnalyzeTableOutput{}, err
 	}
 
 	schema := input.Schema

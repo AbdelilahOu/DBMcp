@@ -1,13 +1,13 @@
 {
   "connections": {
     "Woco360": {
-      "name": "Woco360 PostgreSQL",
+      "name": "Woco360-PostgreSQL",
       "type": "postgres",
       "url": "postgresql://postgres:postgres@localhost:5432/woco360?sslmode=disable",
       "description": "Local development PostgreSQL database for woco360"
     }
   },
-  "default_connection": "Woco360 PostgreSQL",
+  "default_connection": "Woco360-PostgreSQL",
   "settings": {
     "query_timeout": "30s",
     "max_connections": 10,

@@ -8,9 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AbdelilahOu/DBMcp/internal/client"
-	"github.com/AbdelilahOu/DBMcp/internal/state"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -39,21 +36,20 @@ type DescribeTableOutput struct {
 	Indexes []IndexInfo  `json:"indexes" jsonschema_description:"Array of index information"`
 }
 
-func GetDescribeTableTool(dbClient *client.DBClient) *ToolDefinition[DescribeTableInput, DescribeTableOutput] {
+func GetDescribeTableTool() *ToolDefinition[DescribeTableInput, DescribeTableOutput] {
 	return NewToolDefinition[DescribeTableInput, DescribeTableOutput](
 		"describe_table",
 		"Get detailed information about table structure, columns, and indexes.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input DescribeTableInput) (*mcp.CallToolResult, DescribeTableOutput, error) {
-			return describeTableHandler(ctx, req, input, dbClient)
+			return describeTableHandler(ctx, req, input)
 		},
 	)
 }
 
-func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input DescribeTableInput, dbClient *client.DBClient) (*mcp.CallToolResult, DescribeTableOutput, error) {
-	sessionID := "default"
-	sessionState := state.GetOrCreateSession(sessionID, dbClient)
-	if sessionState == nil || sessionState.Conn == nil {
-		return nil, DescribeTableOutput{}, fmt.Errorf("no active DB connection in session")
+func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input DescribeTableInput) (*mcp.CallToolResult, DescribeTableOutput, error) {
+	sessionState, err := getActiveSession("default")
+	if err != nil {
+		return nil, DescribeTableOutput{}, err
 	}
 
 	schema := input.Schema

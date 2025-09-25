@@ -7,9 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AbdelilahOu/DBMcp/internal/client"
-	"github.com/AbdelilahOu/DBMcp/internal/state"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -21,21 +18,20 @@ type ExplainQueryOutput struct {
 	Plan string `json:"plan" jsonschema_description:"Query execution plan"`
 }
 
-func GetExplainQueryTool(dbClient *client.DBClient) *ToolDefinition[ExplainQueryInput, ExplainQueryOutput] {
+func GetExplainQueryTool() *ToolDefinition[ExplainQueryInput, ExplainQueryOutput] {
 	return NewToolDefinition[ExplainQueryInput, ExplainQueryOutput](
 		"explain_query",
 		"Get query execution plan for performance analysis.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ExplainQueryInput) (*mcp.CallToolResult, ExplainQueryOutput, error) {
-			return explainQueryHandler(ctx, req, input, dbClient)
+			return explainQueryHandler(ctx, req, input)
 		},
 	)
 }
 
-func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input ExplainQueryInput, dbClient *client.DBClient) (*mcp.CallToolResult, ExplainQueryOutput, error) {
-	sessionID := "default"
-	sessionState := state.GetOrCreateSession(sessionID, dbClient)
-	if sessionState == nil || sessionState.Conn == nil {
-		return nil, ExplainQueryOutput{}, fmt.Errorf("no active DB connection in session")
+func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input ExplainQueryInput) (*mcp.CallToolResult, ExplainQueryOutput, error) {
+	sessionState, err := getActiveSession("default")
+	if err != nil {
+		return nil, ExplainQueryOutput{}, err
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)

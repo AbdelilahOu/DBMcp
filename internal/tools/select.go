@@ -7,9 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AbdelilahOu/DBMcp/internal/client"
-	"github.com/AbdelilahOu/DBMcp/internal/state"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -21,32 +18,31 @@ type ExecuteSelectOutput struct {
 	Results string `json:"results" jsonschema_description:"JSON array of query results"`
 }
 
-func GetExecuteSelectTool(dbClient *client.DBClient, readOnly bool) *ToolDefinition[ExecuteSelectInput, ExecuteSelectOutput] {
+func GetExecuteSelectTool(readOnly bool) *ToolDefinition[ExecuteSelectInput, ExecuteSelectOutput] {
 	return NewToolDefinition[ExecuteSelectInput, ExecuteSelectOutput](
 		"execute_select",
 		"Execute a SELECT query on the database and return JSON results.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ExecuteSelectInput) (*mcp.CallToolResult, ExecuteSelectOutput, error) {
-			return executeSelectHandler(ctx, req, input, dbClient, readOnly)
+			return executeSelectHandler(ctx, req, input, readOnly)
 		},
 	)
 }
 
-func executeSelectHandler(ctx context.Context, req *mcp.CallToolRequest, input ExecuteSelectInput, dbClient *client.DBClient, readOnly bool) (*mcp.CallToolResult, ExecuteSelectOutput, error) {
+func executeSelectHandler(ctx context.Context, req *mcp.CallToolRequest, input ExecuteSelectInput, readOnly bool) (*mcp.CallToolResult, ExecuteSelectOutput, error) {
 	queryLower := strings.ToLower(input.Query)
 	if readOnly && !strings.HasPrefix(queryLower, "select") {
 		return nil, ExecuteSelectOutput{}, fmt.Errorf("read-only mode: only SELECT queries allowed")
 	}
 
-	sessionID := "default"
-	state := state.GetOrCreateSession(sessionID, dbClient)
-	if state == nil || state.Conn == nil {
-		return nil, ExecuteSelectOutput{}, fmt.Errorf("no active DB connection in session")
+	sessionState, err := getActiveSession("default")
+	if err != nil {
+		return nil, ExecuteSelectOutput{}, err
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	rows, err := state.Conn.QueryContext(ctx, input.Query)
+	rows, err := sessionState.Conn.QueryContext(ctx, input.Query)
 	if err != nil {
 		return nil, ExecuteSelectOutput{}, fmt.Errorf("query error: %v", err)
 	}

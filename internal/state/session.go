@@ -29,6 +29,20 @@ func GetOrCreateSession(sessionID string, globalClient *client.DBClient) *DBSess
 	mu.Lock()
 	defer mu.Unlock()
 
+	// If no global client provided, create empty session that can be populated later
+	if globalClient == nil {
+		id := sessionID
+		if id == "" {
+			id = uuid.New().String()
+		}
+		s := &DBSessionState{
+			Conn:          nil,
+			CurrentSchema: "public",
+		}
+		sessions[id] = s
+		return s
+	}
+
 	conn := globalClient.DB
 	if err := conn.Ping(); err != nil {
 		return nil
@@ -44,6 +58,13 @@ func GetOrCreateSession(sessionID string, globalClient *client.DBClient) *DBSess
 	}
 	sessions[id] = s
 	return s
+}
+
+// GetSession returns an existing session without creating one
+func GetSession(sessionID string) *DBSessionState {
+	mu.RLock()
+	defer mu.RUnlock()
+	return sessions[sessionID]
 }
 
 func CloseSession(sessionID string) {

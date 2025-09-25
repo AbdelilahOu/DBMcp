@@ -39,41 +39,27 @@ func runStdioServer(cmd *cobra.Command, args []string) error {
 	connection, _ := cmd.Flags().GetString("connection")
 	readOnly, _ := cmd.Flags().GetBool("read-only")
 
-	var finalConnStr string
-
-	if connection != "" {
-		cfg, err := config.LoadConfig()
-		if err != nil {
-			return fmt.Errorf("failed to load config: %v", err)
-		}
-
-		conn, exists := cfg.GetConnection(connection)
-		if !exists {
-			return fmt.Errorf("connection '%s' not found in config", connection)
-		}
-
-		finalConnStr = conn.URL
-		fmt.Printf("Using named connection: %s (%s)\n", connection, conn.Name)
-
-		tools.GlobalConfig = cfg
+	// Load config and set global config for tools to use
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		fmt.Printf("Warning: Failed to load config: %v\n", err)
+		fmt.Println("Server will start without connections. Use list_connections and switch_connection tools.")
 	} else {
-		cfg, err := config.LoadConfig()
-		if err == nil && cfg.DefaultConnection != "" {
-			conn, exists := cfg.GetConnection(cfg.DefaultConnection)
-			if exists {
-				finalConnStr = conn.URL
-				fmt.Printf("Using default connection: %s (%s)\n", cfg.DefaultConnection, conn.Name)
-				tools.GlobalConfig = cfg
+		tools.GlobalConfig = cfg
+		if connection != "" {
+			if _, exists := cfg.GetConnection(connection); exists {
+				fmt.Printf("Config loaded. Default connection available: %s\n", connection)
+			} else {
+				return fmt.Errorf("connection '%s' not found in config", connection)
 			}
-		}
-
-		if finalConnStr == "" {
-			return fmt.Errorf("no connection specified. Use --conn-string or --connection, or set a default connection in config")
+		} else if cfg.DefaultConnection != "" {
+			fmt.Printf("Config loaded. Default connection available: %s\n", cfg.DefaultConnection)
+		} else {
+			fmt.Println("Config loaded. Use list_connections and switch_connection tools to connect to a database.")
 		}
 	}
 
 	return server.RunStdioServer(server.StdioServerConfig{
-		DBUrl:    finalConnStr,
 		ReadOnly: readOnly,
 		Version:  "v0.1.0",
 	})

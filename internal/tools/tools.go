@@ -1,32 +1,51 @@
 package tools
 
 import (
-	"github.com/AbdelilahOu/DBMcp/internal/client"
+	"fmt"
+
+	"github.com/AbdelilahOu/DBMcp/internal/state"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func RegisterTools(s *mcp.Server, dbClient *client.DBClient, readOnly bool) {
+// getActiveSession returns the active database session, creating an empty one if it doesn't exist
+func getActiveSession(sessionID string) (*state.DBSessionState, error) {
+	if sessionID == "" {
+		sessionID = "default"
+	}
+
+	sessionState := state.GetSession(sessionID)
+	if sessionState == nil {
+		// Create session without initial connection - user must switch connection first
+		sessionState = state.GetOrCreateSession(sessionID, nil)
+	}
+
+	if sessionState.Conn == nil {
+		return nil, fmt.Errorf("no active DB connection. Use switch_connection tool to connect to a database first")
+	}
+
+	return sessionState, nil
+}
+
+func RegisterTools(s *mcp.Server, readOnly bool) {
 	// Execute Select Tool
-	GetExecuteSelectTool(dbClient, readOnly).Register(s)
+	GetExecuteSelectTool(readOnly).Register(s)
 	// List Tables Tool
-	GetListTablesTool(dbClient).Register(s)
+	GetListTablesTool().Register(s)
 	// Describe Table Tool
-	GetDescribeTableTool(dbClient).Register(s)
+	GetDescribeTableTool().Register(s)
 	// Get DB Info Tool
-	GetDbInfoTool(dbClient).Register(s)
+	GetDbInfoTool().Register(s)
 	// Execute Query Tool (only if not read-only)
 	if !readOnly {
-		GetExecuteQueryTool(dbClient, readOnly).Register(s)
+		GetExecuteQueryTool(readOnly).Register(s)
 	}
 	// Explain Query Tool
-	GetExplainQueryTool(dbClient).Register(s)
-	// List Connections Tool
+	GetExplainQueryTool().Register(s)
+	// Connection Management Tools (always available)
 	GetListConnectionsTool().Register(s)
-	// Switch Connection Tool
 	GetSwitchConnectionTool().Register(s)
-	// Test Connection Tool
-	GetTestConnectionTool(dbClient).Register(s)
+	GetTestConnectionTool().Register(s)
 	// Analyze Table Tool
-	GetAnalyzeTableTool(dbClient).Register(s)
+	GetAnalyzeTableTool().Register(s)
 }
