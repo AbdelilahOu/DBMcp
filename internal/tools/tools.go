@@ -23,3 +23,13 @@ func AddDBTools(s *mcp.Server, dbClient *client.DBClient, readOnly bool, toolset
 		return executeSelectHandler(ctx, req, input, dbClient, readOnly)
 	})
 }
+
+// Helper: contains for toolsets
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}

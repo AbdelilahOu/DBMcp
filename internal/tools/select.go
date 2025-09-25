@@ -87,13 +87,3 @@ func executeSelectHandler(ctx context.Context, req *mcp.CallToolRequest, input m
 		},
 	}, mcpdb.ExecuteSelectOutput{Results: string(jsonBytes)}, nil
 }
-
-// Helper: contains for toolsets
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
