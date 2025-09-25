@@ -14,7 +14,6 @@ import (
 )
 
 func executeQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb.ExecuteQueryInput, dbClient *client.DBClient, readOnly bool) (*mcp.CallToolResult, mcpdb.ExecuteQueryOutput, error) {
-
 	sessionID := "default"
 	sessionState := state.GetOrCreateSession(sessionID, dbClient)
 	if sessionState == nil || sessionState.Conn == nil {
@@ -47,7 +46,6 @@ func executeQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input mc
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-
 		rowsAffected = 0
 	}
 

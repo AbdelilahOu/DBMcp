@@ -14,7 +14,6 @@ import (
 )
 
 func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb.ExplainQueryInput, dbClient *client.DBClient) (*mcp.CallToolResult, mcpdb.ExplainQueryOutput, error) {
-
 	sessionID := "default"
 	sessionState := state.GetOrCreateSession(sessionID, dbClient)
 	if sessionState == nil || sessionState.Conn == nil {
@@ -27,7 +26,6 @@ func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input mc
 	query := strings.TrimSpace(input.Query)
 	queryLower := strings.ToLower(query)
 	if strings.HasPrefix(queryLower, "explain") {
-
 		parts := strings.SplitN(query, " ", 2)
 		if len(parts) > 1 {
 			query = strings.TrimSpace(parts[1])
@@ -40,15 +38,12 @@ func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input mc
 	explainQuery = fmt.Sprintf("EXPLAIN (FORMAT JSON, ANALYZE false) %s", query)
 	rows, err := sessionState.Conn.QueryContext(ctx, explainQuery)
 	if err != nil {
-
 		explainQuery = fmt.Sprintf("EXPLAIN %s", query)
 		rows, err = sessionState.Conn.QueryContext(ctx, explainQuery)
 		if err != nil {
-
 			explainQuery = fmt.Sprintf("EXPLAIN FORMAT=JSON %s", query)
 			rows, err = sessionState.Conn.QueryContext(ctx, explainQuery)
 			if err != nil {
-
 				explainQuery = fmt.Sprintf("EXPLAIN %s", query)
 				rows, err = sessionState.Conn.QueryContext(ctx, explainQuery)
 				if err != nil {
@@ -93,10 +88,8 @@ func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input mc
 			}
 
 			if len(columns) == 1 {
-
 				rowParts = append(rowParts, strVal)
 			} else {
-
 				rowParts = append(rowParts, fmt.Sprintf("%s: %s", col, strVal))
 			}
 		}
@@ -111,7 +104,6 @@ func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input mc
 	plan = strings.Join(planLines, "\n")
 
 	if strings.HasPrefix(strings.TrimSpace(plan), "[") || strings.HasPrefix(strings.TrimSpace(plan), "{") {
-
 		var planJSON interface{}
 		if err := json.Unmarshal([]byte(plan), &planJSON); err == nil {
 			if formatted, err := json.MarshalIndent(planJSON, "", "  "); err == nil {

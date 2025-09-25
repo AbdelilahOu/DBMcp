@@ -15,7 +15,6 @@ import (
 )
 
 func getDBInfoHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb.GetDBInfoInput, dbClient *client.DBClient) (*mcp.CallToolResult, mcpdb.GetDBInfoOutput, error) {
-
 	sessionID := "default"
 	sessionState := state.GetOrCreateSession(sessionID, dbClient)
 	if sessionState == nil || sessionState.Conn == nil {
@@ -36,7 +35,6 @@ func getDBInfoHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb
 
 	err := sessionState.Conn.QueryRowContext(ctx, pgDbNameQuery).Scan(&dbName)
 	if err != nil {
-
 		mysqlDbNameQuery := "SELECT DATABASE()"
 		mysqlVersionQuery := "SELECT VERSION()"
 		mysqlSchemasQuery := "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')"
@@ -64,7 +62,6 @@ func getDBInfoHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb
 
 		version = "MySQL " + version
 	} else {
-
 		err = sessionState.Conn.QueryRowContext(ctx, pgVersionQuery).Scan(&version)
 		if err != nil {
 			return nil, mcpdb.GetDBInfoOutput{}, fmt.Errorf("failed to get version: %v", err)

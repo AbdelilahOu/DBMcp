@@ -15,7 +15,6 @@ import (
 )
 
 func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb.DescribeTableInput, dbClient *client.DBClient) (*mcp.CallToolResult, mcpdb.DescribeTableOutput, error) {
-
 	sessionID := "default"
 	sessionState := state.GetOrCreateSession(sessionID, dbClient)
 	if sessionState == nil || sessionState.Conn == nil {
@@ -58,7 +57,6 @@ func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input m
 }
 
 func getTableColumns(ctx context.Context, conn *sql.DB, tableName, schema string) ([]mcpdb.ColumnInfo, error) {
-
 	pgQuery := `
 		SELECT
 			c.column_name,
@@ -82,7 +80,6 @@ func getTableColumns(ctx context.Context, conn *sql.DB, tableName, schema string
 
 	rows, err := conn.QueryContext(ctx, pgQuery, tableName, schema)
 	if err != nil {
-
 		mysqlQuery := `
 			SELECT
 				COLUMN_NAME as column_name,
@@ -131,7 +128,6 @@ func getTableColumns(ctx context.Context, conn *sql.DB, tableName, schema string
 }
 
 func getTableIndexes(ctx context.Context, conn *sql.DB, tableName, schema string) ([]mcpdb.IndexInfo, error) {
-
 	pgQuery := `
 		SELECT
 			i.relname as index_name,
@@ -148,7 +144,6 @@ func getTableIndexes(ctx context.Context, conn *sql.DB, tableName, schema string
 
 	rows, err := conn.QueryContext(ctx, pgQuery, tableName, schema)
 	if err != nil {
-
 		mysqlQuery := `
 			SELECT
 				INDEX_NAME as index_name,
@@ -178,11 +173,9 @@ func getTableIndexes(ctx context.Context, conn *sql.DB, tableName, schema string
 
 		var columns []string
 		if strings.HasPrefix(columnsStr, "{") && strings.HasSuffix(columnsStr, "}") {
-
 			columnsStr = strings.Trim(columnsStr, "{}")
 			columns = strings.Split(columnsStr, ",")
 		} else {
-
 			columns = strings.Split(columnsStr, ",")
 		}
 

@@ -31,7 +31,6 @@ func GetOrCreateSession(sessionID string, globalClient *client.DBClient) *DBSess
 
 	conn := globalClient.DB
 	if err := conn.Ping(); err != nil {
-
 		return nil
 	}
 

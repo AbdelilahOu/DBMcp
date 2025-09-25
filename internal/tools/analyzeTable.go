@@ -14,7 +14,6 @@ import (
 )
 
 func analyzeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb.AnalyzeTableInput, dbClient *client.DBClient) (*mcp.CallToolResult, mcpdb.AnalyzeTableOutput, error) {
-
 	sessionID := "default"
 	sessionState := state.GetOrCreateSession(sessionID, dbClient)
 	if sessionState == nil || sessionState.Conn == nil {
@@ -76,7 +75,6 @@ func getTableStatistics(ctx context.Context, conn *sql.DB, tableName, schema str
 
 	err = conn.QueryRowContext(ctx, pgRowCountQuery).Scan(&stats.RowCount)
 	if err != nil {
-
 		mysqlRowCountQuery := "SELECT COUNT(*) FROM `" + schema + "`.`" + tableName + "`"
 		mysqlSizeQuery := `
 			SELECT
@@ -140,7 +138,6 @@ func getTableStatistics(ctx context.Context, conn *sql.DB, tableName, schema str
 		}
 
 	} else {
-
 		err = conn.QueryRowContext(ctx, pgSizeQuery, schema, tableName).Scan(&stats.TotalSize, &stats.TableSize, &stats.IndexSize)
 		if err != nil {
 			stats.TotalSize = "N/A"

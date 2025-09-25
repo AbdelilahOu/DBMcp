@@ -14,7 +14,6 @@ import (
 )
 
 func executeSelectHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb.ExecuteSelectInput, dbClient *client.DBClient, readOnly bool) (*mcp.CallToolResult, mcpdb.ExecuteSelectOutput, error) {
-
 	queryLower := strings.ToLower(input.Query)
 	if readOnly && !strings.HasPrefix(queryLower, "select") {
 		return nil, mcpdb.ExecuteSelectOutput{}, fmt.Errorf("read-only mode: only SELECT queries allowed")
@@ -42,7 +41,6 @@ func executeSelectHandler(ctx context.Context, req *mcp.CallToolRequest, input m
 
 	results := []map[string]interface{}{}
 	for rows.Next() {
-
 		vals := make([]interface{}, len(columns))
 		valPtrs := make([]interface{}, len(columns))
 		for i := range vals {

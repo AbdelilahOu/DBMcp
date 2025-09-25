@@ -26,7 +26,6 @@ func Execute() {
 }
 
 func init() {
-
 	rootCmd.PersistentFlags().StringP("conn-string", "c", os.Getenv("DB_CONN_STRING"), "DB connection string (e.g., postgres://user:pass@host/db)")
 	rootCmd.PersistentFlags().StringP("connection", "n", "", "Named connection from config file")
 	rootCmd.PersistentFlags().BoolP("read-only", "r", false, "Enable read-only mode (SELECT only)")
@@ -50,7 +49,6 @@ func runStdioServer(cmd *cobra.Command, args []string) error {
 	var err error
 
 	if connection != "" {
-
 		cfg, err := config.LoadConfig()
 		if err != nil {
 			return fmt.Errorf("failed to load config: %v", err)
@@ -66,11 +64,9 @@ func runStdioServer(cmd *cobra.Command, args []string) error {
 
 		tools.GlobalConfig = cfg
 	} else if connStr != "" {
-
 		finalConnStr = connStr
 		fmt.Printf("Using direct connection string\n")
 	} else {
-
 		cfg, err := config.LoadConfig()
 		if err == nil && cfg.DefaultConnection != "" {
 			conn, exists := cfg.GetConnection(cfg.DefaultConnection)

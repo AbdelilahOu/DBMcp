@@ -16,7 +16,6 @@ var GlobalConfig *config.Config
 
 func listConnectionsHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb.ListConnectionsInput) (*mcp.CallToolResult, mcpdb.ListConnectionsOutput, error) {
 	if GlobalConfig == nil {
-
 		cfg, err := config.LoadConfig()
 		if err != nil {
 			return nil, mcpdb.ListConnectionsOutput{}, fmt.Errorf("failed to load config: %v", err)
@@ -54,7 +53,6 @@ func listConnectionsHandler(ctx context.Context, req *mcp.CallToolRequest, input
 
 func switchConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb.SwitchConnectionInput) (*mcp.CallToolResult, mcpdb.SwitchConnectionOutput, error) {
 	if GlobalConfig == nil {
-
 		cfg, err := config.LoadConfig()
 		if err != nil {
 			return nil, mcpdb.SwitchConnectionOutput{}, fmt.Errorf("failed to load config: %v", err)
@@ -103,9 +101,7 @@ func testConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, input 
 	var err error
 
 	if input.Connection != "" {
-
 		if GlobalConfig == nil {
-
 			cfg, err := config.LoadConfig()
 			if err != nil {
 				return nil, mcpdb.TestConnectionOutput{}, fmt.Errorf("failed to load config: %v", err)
@@ -137,7 +133,6 @@ func testConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, input 
 
 		connectionName = input.Connection
 	} else {
-
 		sessionID := "default"
 		sessionState := state.GetOrCreateSession(sessionID, dbClient)
 		if sessionState == nil || sessionState.Conn == nil {

@@ -15,7 +15,6 @@ import (
 )
 
 func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb.ListTablesInput, dbClient *client.DBClient) (*mcp.CallToolResult, mcpdb.ListTablesOutput, error) {
-
 	sessionID := "default"
 	sessionState := state.GetOrCreateSession(sessionID, dbClient)
 	if sessionState == nil || sessionState.Conn == nil {
@@ -33,7 +32,6 @@ func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpd
 	_, err := sessionState.Conn.QueryContext(ctx, detectQuery)
 
 	if err != nil {
-
 		query = `
 			SELECT
 				table_name as name,
@@ -54,7 +52,6 @@ func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpd
 				ORDER BY table_name`
 		}
 	} else {
-
 		if input.Schema != "" {
 			query = `
 				SELECT
