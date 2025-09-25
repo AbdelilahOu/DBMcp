@@ -1,270 +1,65 @@
-# DB MCP Server
+# Database MCP Server
 
-A Model Context Protocol (MCP) server that provides database connectivity and query capabilities for AI assistants. Connect to multiple databases (PostgreSQL, MySQL) and execute queries through a simple, secure interface.
+A Model Context Protocol (MCP) server that provides comprehensive database connectivity and query capabilities for Claude and other AI assistants. This server enables seamless interaction with databases through a standardized interface, supporting multiple database types and connection management.
 
-## Features
+## What is this project?
 
-- 🔗 **Multi-Database Support**: Connect to PostgreSQL and MySQL databases
-- 🔧 **Multiple Connection Management**: Define and switch between named database connections
-- 🛡️ **Security**: Read-only mode support with query validation
-- 📊 **Rich Query Results**: Properly formatted JSON results with type handling
-- ⚡ **Session Management**: Efficient connection pooling and reuse
+This MCP server bridges the gap between AI assistants and database systems, allowing Claude to:
 
-## Installation
+- **Connect to multiple databases** - PostgreSQL, MySQL, and other SQL databases
+- **Execute queries safely** - With built-in validation and optional read-only modes
+- **Explore database schemas** - Inspect tables, columns, indexes, and relationships
+- **Analyze data** - Get table statistics and query performance insights
+- **Manage connections** - Switch between different database environments seamlessly
 
-```bash
-git clone https://github.com/AbdelilahOu/DBMcp.git
-cd DBMcp
-go build -o db-mcp-server ./cmd
-```
+## Key Features
 
-## Configuration
+- 🔗 **Multi-Database Support** - Connect to PostgreSQL, MySQL, and other SQL databases
+- 🛡️ **Security First** - Read-only mode, query validation, and secure credential handling
+- 📊 **Rich Schema Inspection** - Detailed table descriptions, column metadata, and index information
+- ⚡ **Performance Analysis** - Query execution plans and table statistics
+- 🔧 **Flexible Connection Management** - Named connections with easy switching
+- 🎯 **AI-Optimized** - Designed specifically for AI assistant workflows
 
-Create a configuration file at one of these locations:
-- `~/.config/db-mcp/connections.json` (Linux/macOS)
-- `%APPDATA%\db-mcp\connections.json` (Windows)
-- `./connections.json` (Current directory)
+## Available Tools
 
-### Configuration File Format
+The server provides comprehensive database interaction capabilities:
 
-```json
-{
-  "connections": {
-    "production_pg": {
-      "name": "Production PostgreSQL",
-      "type": "postgres",
-      "url": "postgres://user:password@localhost:5432/mydb?sslmode=disable",
-      "description": "Main production database"
-    },
-    "dev_mysql": {
-      "name": "Development MySQL",
-      "type": "mysql",
-      "url": "mysql://user:password@localhost:3306/testdb",
-      "description": "Development MySQL instance"
-    },
-    "analytics": {
-      "name": "Analytics DB",
-      "type": "postgres",
-      "url": "postgres://readonly:pass@analytics.company.com:5432/analytics",
-      "description": "Read-only analytics database"
-    }
-  },
-  "default_connection": "production_pg"
-}
-```
+### Query Execution
+- `execute_select` - Run SELECT queries with formatted JSON results
+- `execute_query` - Execute any SQL operation (INSERT, UPDATE, DELETE, etc.)
 
-## Usage
+### Schema Exploration
+- `describe_table` - Get detailed table structure, columns, and indexes
+- `list_tables` - Browse all available tables with metadata
+- `get_db_info` - Access general database information and statistics
 
-### Run as MCP Server (Stdio Transport)
+### Performance & Analysis
+- `explain_query` - Analyze query execution plans for optimization
+- `analyze_table` - Retrieve table statistics and performance metrics
 
-```bash
-# Using connection from config file
-./db-mcp-server stdio --connection production_pg
+### Connection Management
+- `list_connections` - View all configured database connections
+- `switch_connection` - Change active database connection during sessions
+- `test_connection` - Verify database connectivity before operations
 
-# Using direct connection string
-./db-mcp-server stdio --conn-string "postgres://user:pass@host/db"
+## Use Cases
 
-# Read-only mode
-./db-mcp-server stdio --connection dev_mysql --read-only
-```
+This MCP server is perfect for:
 
-### Available Flags
+- **Database Administration** - Schema exploration and maintenance tasks
+- **Data Analysis** - Querying and analyzing data with AI assistance
+- **Development Support** - Understanding database structures and relationships
+- **Performance Tuning** - Analyzing query plans and optimizing database performance
+- **Documentation** - Generating database documentation and schemas
+- **Migration Planning** - Understanding existing database structures
 
-- `--connection, -n`: Named connection from config file
-- `--conn-string, -c`: Direct database connection string
-- `--read-only, -r`: Enable read-only mode (SELECT queries only)
-- `--toolsets, -t`: Toolsets to enable (default: `["db"]`)
+## Security & Safety
 
-## Current Tools
+Built with security as a priority:
+- **Read-only mode** for safe exploration
+- **Query validation** to prevent harmful operations
+- **Connection timeouts** to prevent resource exhaustion
+- **Secure credential management** through configuration files
 
-### execute_select
-Execute SELECT queries and return formatted JSON results.
-
-**Input:**
-```json
-{
-  "query": "SELECT id, name, email FROM users LIMIT 5"
-}
-```
-
-**Output:**
-```json
-{
-  "results": "[{\"id\":1,\"name\":\"John\",\"email\":\"john@example.com\"}]"
-}
-```
-
-## Planned Tools & Features
-
-### 🚀 Next Phase - Database Schema Tools
-
-#### 1. list_tables
-List all tables in the database with metadata.
-
-**Input:**
-```json
-{
-  "schema": "public"
-}
-```
-
-**Output:**
-```json
-{
-  "tables": [
-    {
-      "name": "users",
-      "schema": "public",
-      "type": "table"
-    }
-  ]
-}
-```
-
-#### 2. describe_table
-Get detailed information about table structure, columns, and indexes.
-
-**Input:**
-```json
-{
-  "table_name": "users",
-  "schema": "public"
-}
-```
-
-**Output:**
-```json
-{
-  "columns": [
-    {
-      "name": "id",
-      "data_type": "integer",
-      "is_nullable": false,
-      "is_primary_key": true
-    }
-  ],
-  "indexes": [
-    {
-      "name": "users_pkey",
-      "columns": ["id"],
-      "is_unique": true
-    }
-  ]
-}
-```
-
-#### 3. get_db_info
-Get general database information and statistics.
-
-**Input:**
-```json
-{}
-```
-
-**Output:**
-```json
-{
-  "database_name": "myapp",
-  "version": "PostgreSQL 15.4",
-  "schemas": ["public", "auth"],
-  "table_count": 25
-}
-```
-
-### 🔄 Phase 2 - Advanced Query Tools
-
-#### 4. execute_query
-Execute any SQL query (INSERT, UPDATE, DELETE, etc.) with proper permissions.
-
-**Input:**
-```json
-{
-  "query": "INSERT INTO users (name, email) VALUES ('Alice', 'alice@example.com')"
-}
-```
-
-#### 5. explain_query
-Get query execution plan for performance analysis.
-
-**Input:**
-```json
-{
-  "query": "SELECT * FROM users WHERE email = 'john@example.com'"
-}
-```
-
-### 🛠️ Phase 3 - Connection Management
-
-#### 6. list_connections
-List all available named connections from config.
-
-#### 7. switch_connection
-Switch to a different database connection during the session.
-
-#### 8. test_connection
-Test connectivity to a database before executing queries.
-
-### 📊 Phase 4 - Data Analysis Tools
-
-#### 9. analyze_table
-Get table statistics (row count, size, column stats).
-
-#### 10. generate_sample_data
-Generate sample data for testing purposes.
-
-## Architecture
-
-```
-db-mcp-server/
-├── cmd/                    # CLI application entry point
-├── internal/
-│   ├── client/            # Database client wrapper
-│   ├── config/            # Configuration management (TODO)
-│   ├── state/             # Session state management
-│   └── tools/             # MCP tool implementations
-├── pkg/                   # Public types and schemas
-└── connections.json       # Example configuration file
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/new-tool`
-3. Implement your changes with tests
-4. Submit a pull request
-
-## Security Considerations
-
-- **Read-only Mode**: Use `--read-only` flag for untrusted environments
-- **Connection Strings**: Store sensitive credentials securely
-- **Query Validation**: Built-in SQL injection protection
-- **Timeouts**: All queries have configurable timeouts (default: 5s)
-
-## Examples
-
-### Connecting to Different Databases
-
-```bash
-# Connect to production PostgreSQL
-./db-mcp-server stdio --connection production_pg
-
-# Connect to development MySQL in read-only mode
-./db-mcp-server stdio --connection dev_mysql --read-only
-
-# Use direct connection string
-./db-mcp-server stdio --conn-string "postgres://user:pass@localhost/test"
-```
-
-### Sample Queries
-
-```sql
--- List all tables
-SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
-
--- Get user data
-SELECT id, name, email, created_at FROM users ORDER BY created_at DESC LIMIT 10;
-
--- Analyze table structure
-DESCRIBE users;  -- MySQL
-\d users         -- PostgreSQL
-```
+Perfect for teams who want to leverage AI assistance for database work while maintaining security and control over their data.
