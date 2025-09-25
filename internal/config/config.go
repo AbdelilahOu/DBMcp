@@ -38,52 +38,13 @@ func LoadConfig() (*Config, error) {
 	}, nil
 }
 
-func LoadConfigFromFile(path string) (*Config, error) {
-	return loadConfigFromFile(path)
-}
-
-func (c *Config) SaveConfig() error {
-	configPaths := getConfigPaths()
-	configPath := configPaths[0]
-
-	dir := filepath.Dir(configPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("failed to create config directory: %v", err)
-	}
-
-	return c.saveConfigToFile(configPath)
-}
-
-func (c *Config) SaveConfigToFile(path string) error {
-	return c.saveConfigToFile(path)
-}
-
 func (c *Config) GetConnection(name string) (Connection, bool) {
 	conn, exists := c.Connections[name]
 	return conn, exists
 }
 
-func (c *Config) AddConnection(name string, conn Connection) {
-	if c.Connections == nil {
-		c.Connections = make(map[string]Connection)
-	}
-	c.Connections[name] = conn
-}
-
-func (c *Config) RemoveConnection(name string) {
-	delete(c.Connections, name)
-}
-
 func (c *Config) ListConnections() map[string]Connection {
 	return c.Connections
-}
-
-func (c *Config) GetDefaultConnection() string {
-	return c.DefaultConnection
-}
-
-func (c *Config) SetDefaultConnection(name string) {
-	c.DefaultConnection = name
 }
 
 func (c *Config) ValidateConnection(conn Connection) error {
@@ -145,17 +106,4 @@ func loadConfigFromFile(path string) (*Config, error) {
 	}
 
 	return &config, nil
-}
-
-func (c *Config) saveConfigToFile(path string) error {
-	data, err := json.MarshalIndent(c, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal config: %v", err)
-	}
-
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("failed to write config file: %v", err)
-	}
-
-	return nil
 }
