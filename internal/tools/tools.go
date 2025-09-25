@@ -18,7 +18,7 @@ func AddDBTools(s *mcp.Server, dbClient *client.DBClient, readOnly bool, toolset
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "execute_select",
 		Description: "Execute a SELECT query on the database and return JSON results.",
-		InputSchema: mcpdb.ExecuteSelectInputSchema(), // From types
+		// InputSchema auto-generated from mcpdb.ExecuteSelectInput struct tags
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input mcpdb.ExecuteSelectInput) (*mcp.CallToolResult, mcpdb.ExecuteSelectOutput, error) {
 		return executeSelectHandler(ctx, req, input, dbClient, readOnly)
 	})

@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -18,13 +17,15 @@ func executeSelectHandler(ctx context.Context, req *mcp.CallToolRequest, input m
 	// Validate read-only
 	queryLower := strings.ToLower(input.Query)
 	if readOnly && !strings.HasPrefix(queryLower, "select") {
-		return mcp.NewErrorResult("read_only_violation", "Read-only mode: only SELECT queries allowed"), mcpdb.ExecuteSelectOutput{}, nil
+		return nil, mcpdb.ExecuteSelectOutput{}, fmt.Errorf("read-only mode: only SELECT queries allowed")
 	}
 
 	// Get/create session state (key use case: reuse conn across multi-turn queries)
-	state := state.GetOrCreateSession(req.SessionID, dbClient)
-	if state.Conn == nil {
-		return mcp.NewErrorResult("no_session_conn", "No active DB connection in session"), mcpdb.ExecuteSelectOutput{}, nil
+	// Use a default session for simplicity
+	sessionID := "default"
+	state := state.GetOrCreateSession(sessionID, dbClient)
+	if state == nil || state.Conn == nil {
+		return nil, mcpdb.ExecuteSelectOutput{}, fmt.Errorf("no active DB connection in session")
 	}
 
 	// Timeout context (5s for safety)
@@ -34,33 +35,41 @@ func executeSelectHandler(ctx context.Context, req *mcp.CallToolRequest, input m
 	// Exec query
 	rows, err := state.Conn.QueryContext(ctx, input.Query)
 	if err != nil {
-		return mcp.NewErrorResult("query_failed", fmt.Sprintf("Query error: %v", err)), mcpdb.ExecuteSelectOutput{}, nil
+		return nil, mcpdb.ExecuteSelectOutput{}, fmt.Errorf("query error: %v", err)
 	}
 	defer rows.Close()
 
 	// Scan results to JSON (handles dynamic columns)
 	columns, err := rows.Columns()
 	if err != nil {
-		return mcp.NewErrorResult("scan_failed", fmt.Sprintf("Columns error: %v", err)), mcpdb.ExecuteSelectOutput{}, nil
+		return nil, mcpdb.ExecuteSelectOutput{}, fmt.Errorf("columns error: %v", err)
 	}
 
 	results := []map[string]interface{}{}
 	for rows.Next() {
+		// Use interface{} to handle different types dynamically
 		vals := make([]interface{}, len(columns))
+		valPtrs := make([]interface{}, len(columns))
 		for i := range vals {
-			vals[i] = new(sql.NullString) // Handle nulls/strings; extend for types
+			valPtrs[i] = &vals[i]
 		}
-		if err := rows.Scan(vals...); err != nil {
-			return mcp.NewErrorResult("row_scan_failed", fmt.Sprintf("Scan error: %v", err)), mcpdb.ExecuteSelectOutput{}, nil
+
+		if err := rows.Scan(valPtrs...); err != nil {
+			return nil, mcpdb.ExecuteSelectOutput{}, fmt.Errorf("scan error: %v", err)
 		}
 
 		row := make(map[string]interface{})
 		for i, col := range columns {
-			val := vals[i].(*sql.NullString)
-			if val.Valid {
-				row[col] = val.String
-			} else {
+			val := vals[i]
+			// Handle different SQL types
+			switch v := val.(type) {
+			case []byte:
+				// Convert byte arrays to strings (common for text fields)
+				row[col] = string(v)
+			case nil:
 				row[col] = nil
+			default:
+				row[col] = v
 			}
 		}
 		results = append(results, row)
@@ -69,10 +78,14 @@ func executeSelectHandler(ctx context.Context, req *mcp.CallToolRequest, input m
 	// Marshal output
 	jsonBytes, err := json.Marshal(results)
 	if err != nil {
-		return mcp.NewErrorResult("marshal_failed", fmt.Sprintf("JSON error: %v", err)), mcpdb.ExecuteSelectOutput{}, nil
+		return nil, mcpdb.ExecuteSelectOutput{}, fmt.Errorf("JSON error: %v", err)
 	}
 
-	return nil, mcpdb.ExecuteSelectOutput{Results: string(jsonBytes)}, nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: string(jsonBytes)},
+		},
+	}, mcpdb.ExecuteSelectOutput{Results: string(jsonBytes)}, nil
 }
 
 // Helper: contains for toolsets

@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/AbdelilahOu/DBMcp/internal/client"
+	"github.com/AbdelilahOu/DBMcp/internal/tools"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/spf13/cobra"
 )
 

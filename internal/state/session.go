@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"sync"
 
+	"github.com/AbdelilahOu/DBMcp/internal/client"
 	"github.com/google/uuid"
 )
 
@@ -34,14 +35,11 @@ func GetOrCreateSession(sessionID string, globalClient *client.DBClient) *DBSess
 
 	// Create new (lazy conn open per session for isolation)
 	// In prod, could share global pool; here, per-session for safety
-	conn, err := sql.Open(globalClient.DB.Driver(), globalClient.DB.ConnString()) // Reuse driver/connstr
-	if err != nil {
-		// Fallback or error handling
-		panic(err) // Or return nil; handle in handler
-	}
+	// For now, reuse the global client's connection for simplicity
+	conn := globalClient.DB
 	if err := conn.Ping(); err != nil {
-		conn.Close()
-		panic(err)
+		// Return nil session on connection failure
+		return nil
 	}
 
 	id := sessionID // Use provided ID
