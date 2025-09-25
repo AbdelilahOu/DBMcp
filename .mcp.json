@@ -2,9 +2,9 @@
   "mcpServers": {
     "database": {
       "command": "C:\\Users\\abdel\\OneDrive\\Desktop\\Projects\\ai\\DBMcp\\bin\\db-mcp-server.exe",
-      "args": ["stdio", "--connection", "Woco360-PostgreSQL"],
+      "args": ["stdio", "--connection", "Woco360"],
       "env": {
-        "DB_CONN_STRING": "Woco360-PostgreSQL"
+        "DB_CONN_STRING": "Woco360"
       }
     }
   }

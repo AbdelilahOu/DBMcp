@@ -39,6 +39,8 @@ func runStdioServer(cmd *cobra.Command, args []string) error {
 	connection, _ := cmd.Flags().GetString("connection")
 	readOnly, _ := cmd.Flags().GetBool("read-only")
 
+	var initialConnection string
+
 	// Load config and set global config for tools to use
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -47,20 +49,29 @@ func runStdioServer(cmd *cobra.Command, args []string) error {
 	} else {
 		tools.GlobalConfig = cfg
 		if connection != "" {
+			// User explicitly specified a connection
 			if _, exists := cfg.GetConnection(connection); exists {
-				fmt.Printf("Config loaded. Default connection available: %s\n", connection)
+				fmt.Printf("Config loaded. Will initialize connection: %s\n", connection)
+				initialConnection = connection
 			} else {
 				return fmt.Errorf("connection '%s' not found in config", connection)
 			}
 		} else if cfg.DefaultConnection != "" {
-			fmt.Printf("Config loaded. Default connection available: %s\n", cfg.DefaultConnection)
+			// Try to use default connection if it exists
+			if _, exists := cfg.GetConnection(cfg.DefaultConnection); exists {
+				fmt.Printf("Config loaded. Will initialize default connection: %s\n", cfg.DefaultConnection)
+				initialConnection = cfg.DefaultConnection
+			} else {
+				fmt.Printf("Config loaded. Default connection '%s' not found, starting without initial connection.\n", cfg.DefaultConnection)
+			}
 		} else {
 			fmt.Println("Config loaded. Use list_connections and switch_connection tools to connect to a database.")
 		}
 	}
 
 	return server.RunStdioServer(server.StdioServerConfig{
-		ReadOnly: readOnly,
-		Version:  "v0.1.0",
+		ReadOnly:          readOnly,
+		Version:           "v0.1.0",
+		InitialConnection: initialConnection,
 	})
 }
