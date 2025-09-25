@@ -8,7 +8,6 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// getActiveSession returns the active database session, creating an empty one if it doesn't exist
 func getActiveSession(sessionID string) (*state.DBSessionState, error) {
 	if sessionID == "" {
 		sessionID = "default"
@@ -16,7 +15,6 @@ func getActiveSession(sessionID string) (*state.DBSessionState, error) {
 
 	sessionState := state.GetSession(sessionID)
 	if sessionState == nil {
-		// Create session without initial connection - user must switch connection first
 		sessionState = state.GetOrCreateSession(sessionID, nil)
 	}
 
