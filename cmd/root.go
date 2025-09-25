@@ -1,14 +1,12 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 
-	"github.com/AbdelilahOu/DBMcp/internal/client"
 	"github.com/AbdelilahOu/DBMcp/internal/config"
+	"github.com/AbdelilahOu/DBMcp/internal/server"
 	"github.com/AbdelilahOu/DBMcp/internal/tools"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/spf13/cobra"
 )
 
@@ -26,10 +24,8 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringP("conn-string", "c", os.Getenv("DB_CONN_STRING"), "DB connection string (e.g., postgres://user:pass@host/db)")
 	rootCmd.PersistentFlags().StringP("connection", "n", "", "Named connection from config file")
 	rootCmd.PersistentFlags().BoolP("read-only", "r", false, "Enable read-only mode (SELECT only)")
-	rootCmd.PersistentFlags().StringSliceP("toolsets", "t", []string{"db"}, "Toolsets to enable (e.g., db,schema)")
 
 	stdioCmd := &cobra.Command{
 		Use:   "stdio",
@@ -40,13 +36,10 @@ func init() {
 }
 
 func runStdioServer(cmd *cobra.Command, args []string) error {
-	connStr, _ := cmd.Flags().GetString("conn-string")
 	connection, _ := cmd.Flags().GetString("connection")
 	readOnly, _ := cmd.Flags().GetBool("read-only")
-	toolsets, _ := cmd.Flags().GetStringSlice("toolsets")
 
 	var finalConnStr string
-	var err error
 
 	if connection != "" {
 		cfg, err := config.LoadConfig()
@@ -63,9 +56,6 @@ func runStdioServer(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Using named connection: %s (%s)\n", connection, conn.Name)
 
 		tools.GlobalConfig = cfg
-	} else if connStr != "" {
-		finalConnStr = connStr
-		fmt.Printf("Using direct connection string\n")
 	} else {
 		cfg, err := config.LoadConfig()
 		if err == nil && cfg.DefaultConnection != "" {
@@ -82,18 +72,9 @@ func runStdioServer(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	dbClient, err := client.NewDBClient(finalConnStr)
-	if err != nil {
-		return fmt.Errorf("init DB client: %w", err)
-	}
-	defer dbClient.Close()
-
-	impl := &mcp.Implementation{Name: "db-mcp-server", Version: "v0.1.0"}
-	server := mcp.NewServer(impl, nil)
-
-	tools.AddDBTools(server, dbClient, readOnly, toolsets)
-
-	fmt.Printf("DB MCP Server running (read-only: %t, tools: %v)...\n", readOnly, toolsets)
-
-	return server.Run(context.Background(), &mcp.StdioTransport{})
+	return server.RunStdioServer(server.StdioServerConfig{
+		DBUrl:    finalConnStr,
+		ReadOnly: readOnly,
+		Version:  "v0.1.0",
+	})
 }

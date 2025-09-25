@@ -9,15 +9,33 @@ import (
 
 	"github.com/AbdelilahOu/DBMcp/internal/client"
 	"github.com/AbdelilahOu/DBMcp/internal/state"
-	"github.com/AbdelilahOu/DBMcp/pkg"
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb.ExplainQueryInput, dbClient *client.DBClient) (*mcp.CallToolResult, mcpdb.ExplainQueryOutput, error) {
+type ExplainQueryInput struct {
+	Query string `json:"query" jsonschema:"required" jsonschema_description:"SQL query to explain"`
+}
+
+type ExplainQueryOutput struct {
+	Plan string `json:"plan" jsonschema_description:"Query execution plan"`
+}
+
+func GetExplainQueryTool(dbClient *client.DBClient) *ToolDefinition[ExplainQueryInput, ExplainQueryOutput] {
+	return NewToolDefinition[ExplainQueryInput, ExplainQueryOutput](
+		"explain_query",
+		"Get query execution plan for performance analysis.",
+		func(ctx context.Context, req *mcp.CallToolRequest, input ExplainQueryInput) (*mcp.CallToolResult, ExplainQueryOutput, error) {
+			return explainQueryHandler(ctx, req, input, dbClient)
+		},
+	)
+}
+
+func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input ExplainQueryInput, dbClient *client.DBClient) (*mcp.CallToolResult, ExplainQueryOutput, error) {
 	sessionID := "default"
 	sessionState := state.GetOrCreateSession(sessionID, dbClient)
 	if sessionState == nil || sessionState.Conn == nil {
-		return nil, mcpdb.ExplainQueryOutput{}, fmt.Errorf("no active DB connection in session")
+		return nil, ExplainQueryOutput{}, fmt.Errorf("no active DB connection in session")
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
@@ -47,7 +65,7 @@ func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input mc
 				explainQuery = fmt.Sprintf("EXPLAIN %s", query)
 				rows, err = sessionState.Conn.QueryContext(ctx, explainQuery)
 				if err != nil {
-					return nil, mcpdb.ExplainQueryOutput{}, fmt.Errorf("failed to explain query: %v", err)
+					return nil, ExplainQueryOutput{}, fmt.Errorf("failed to explain query: %v", err)
 				}
 			}
 		}
@@ -57,7 +75,7 @@ func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input mc
 	var planLines []string
 	columns, err := rows.Columns()
 	if err != nil {
-		return nil, mcpdb.ExplainQueryOutput{}, fmt.Errorf("failed to get columns: %v", err)
+		return nil, ExplainQueryOutput{}, fmt.Errorf("failed to get columns: %v", err)
 	}
 
 	values := make([]interface{}, len(columns))
@@ -69,7 +87,7 @@ func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input mc
 	for rows.Next() {
 		err := rows.Scan(valuePtrs...)
 		if err != nil {
-			return nil, mcpdb.ExplainQueryOutput{}, fmt.Errorf("scan error: %v", err)
+			return nil, ExplainQueryOutput{}, fmt.Errorf("scan error: %v", err)
 		}
 
 		var rowParts []string
@@ -98,7 +116,7 @@ func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input mc
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, mcpdb.ExplainQueryOutput{}, fmt.Errorf("rows iteration error: %v", err)
+		return nil, ExplainQueryOutput{}, fmt.Errorf("rows iteration error: %v", err)
 	}
 
 	plan = strings.Join(planLines, "\n")
@@ -112,13 +130,13 @@ func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input mc
 		}
 	}
 
-	output := mcpdb.ExplainQueryOutput{
+	output := ExplainQueryOutput{
 		Plan: plan,
 	}
 
 	jsonBytes, err := json.Marshal(output)
 	if err != nil {
-		return nil, mcpdb.ExplainQueryOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+		return nil, ExplainQueryOutput{}, fmt.Errorf("JSON marshal error: %v", err)
 	}
 
 	return &mcp.CallToolResult{

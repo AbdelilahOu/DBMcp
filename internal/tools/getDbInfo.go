@@ -10,15 +10,34 @@ import (
 
 	"github.com/AbdelilahOu/DBMcp/internal/client"
 	"github.com/AbdelilahOu/DBMcp/internal/state"
-	"github.com/AbdelilahOu/DBMcp/pkg"
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func getDBInfoHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb.GetDBInfoInput, dbClient *client.DBClient) (*mcp.CallToolResult, mcpdb.GetDBInfoOutput, error) {
+type GetDBInfoInput struct{}
+
+type GetDBInfoOutput struct {
+	DatabaseName string   `json:"database_name" jsonschema_description:"Name of the database"`
+	Version      string   `json:"version" jsonschema_description:"Database version"`
+	Schemas      []string `json:"schemas" jsonschema_description:"Available schemas"`
+	TableCount   int      `json:"table_count" jsonschema_description:"Total number of tables"`
+}
+
+func GetDbInfoTool(dbClient *client.DBClient) *ToolDefinition[GetDBInfoInput, GetDBInfoOutput] {
+	return NewToolDefinition[GetDBInfoInput, GetDBInfoOutput](
+		"get_db_info",
+		"Get general database information and statistics.",
+		func(ctx context.Context, req *mcp.CallToolRequest, input GetDBInfoInput) (*mcp.CallToolResult, GetDBInfoOutput, error) {
+			return getDBInfoHandler(ctx, req, input, dbClient)
+		},
+	)
+}
+
+func getDBInfoHandler(ctx context.Context, req *mcp.CallToolRequest, input GetDBInfoInput, dbClient *client.DBClient) (*mcp.CallToolResult, GetDBInfoOutput, error) {
 	sessionID := "default"
 	sessionState := state.GetOrCreateSession(sessionID, dbClient)
 	if sessionState == nil || sessionState.Conn == nil {
-		return nil, mcpdb.GetDBInfoOutput{}, fmt.Errorf("no active DB connection in session")
+		return nil, GetDBInfoOutput{}, fmt.Errorf("no active DB connection in session")
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -42,29 +61,29 @@ func getDBInfoHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb
 
 		err = sessionState.Conn.QueryRowContext(ctx, mysqlDbNameQuery).Scan(&dbName)
 		if err != nil {
-			return nil, mcpdb.GetDBInfoOutput{}, fmt.Errorf("failed to get database name: %v", err)
+			return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get database name: %v", err)
 		}
 
 		err = sessionState.Conn.QueryRowContext(ctx, mysqlVersionQuery).Scan(&version)
 		if err != nil {
-			return nil, mcpdb.GetDBInfoOutput{}, fmt.Errorf("failed to get version: %v", err)
+			return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get version: %v", err)
 		}
 
 		schemas, err = getStringSliceFromQuery(ctx, sessionState.Conn, mysqlSchemasQuery)
 		if err != nil {
-			return nil, mcpdb.GetDBInfoOutput{}, fmt.Errorf("failed to get schemas: %v", err)
+			return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get schemas: %v", err)
 		}
 
 		err = sessionState.Conn.QueryRowContext(ctx, mysqlTableCountQuery).Scan(&tableCount)
 		if err != nil {
-			return nil, mcpdb.GetDBInfoOutput{}, fmt.Errorf("failed to get table count: %v", err)
+			return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get table count: %v", err)
 		}
 
 		version = "MySQL " + version
 	} else {
 		err = sessionState.Conn.QueryRowContext(ctx, pgVersionQuery).Scan(&version)
 		if err != nil {
-			return nil, mcpdb.GetDBInfoOutput{}, fmt.Errorf("failed to get version: %v", err)
+			return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get version: %v", err)
 		}
 
 		if strings.Contains(version, "PostgreSQL") {
@@ -76,16 +95,16 @@ func getDBInfoHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb
 
 		schemas, err = getStringSliceFromQuery(ctx, sessionState.Conn, pgSchemasQuery)
 		if err != nil {
-			return nil, mcpdb.GetDBInfoOutput{}, fmt.Errorf("failed to get schemas: %v", err)
+			return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get schemas: %v", err)
 		}
 
 		err = sessionState.Conn.QueryRowContext(ctx, pgTableCountQuery).Scan(&tableCount)
 		if err != nil {
-			return nil, mcpdb.GetDBInfoOutput{}, fmt.Errorf("failed to get table count: %v", err)
+			return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get table count: %v", err)
 		}
 	}
 
-	output := mcpdb.GetDBInfoOutput{
+	output := GetDBInfoOutput{
 		DatabaseName: dbName,
 		Version:      version,
 		Schemas:      schemas,
@@ -94,7 +113,7 @@ func getDBInfoHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb
 
 	jsonBytes, err := json.Marshal(output)
 	if err != nil {
-		return nil, mcpdb.GetDBInfoOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+		return nil, GetDBInfoOutput{}, fmt.Errorf("JSON marshal error: %v", err)
 	}
 
 	return &mcp.CallToolResult{

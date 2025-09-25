@@ -9,15 +9,44 @@ import (
 
 	"github.com/AbdelilahOu/DBMcp/internal/client"
 	"github.com/AbdelilahOu/DBMcp/internal/state"
-	"github.com/AbdelilahOu/DBMcp/pkg"
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func analyzeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb.AnalyzeTableInput, dbClient *client.DBClient) (*mcp.CallToolResult, mcpdb.AnalyzeTableOutput, error) {
+type AnalyzeTableInput struct {
+	TableName string `json:"table_name" jsonschema:"required" jsonschema_description:"Name of the table to analyze"`
+	Schema    string `json:"schema,omitempty" jsonschema_description:"Optional schema name"`
+}
+
+type TableStats struct {
+	TableName    string            `json:"table_name" jsonschema_description:"Table name"`
+	RowCount     int64             `json:"row_count" jsonschema_description:"Approximate number of rows"`
+	TableSize    string            `json:"table_size" jsonschema_description:"Table size in human-readable format"`
+	IndexSize    string            `json:"index_size" jsonschema_description:"Index size in human-readable format"`
+	TotalSize    string            `json:"total_size" jsonschema_description:"Total size (table + indexes)"`
+	ColumnStats  map[string]string `json:"column_stats,omitempty" jsonschema_description:"Basic statistics for columns"`
+	LastAnalyzed string            `json:"last_analyzed,omitempty" jsonschema_description:"When the table was last analyzed"`
+}
+
+type AnalyzeTableOutput struct {
+	Stats TableStats `json:"stats" jsonschema_description:"Table statistics"`
+}
+
+func GetAnalyzeTableTool(dbClient *client.DBClient) *ToolDefinition[AnalyzeTableInput, AnalyzeTableOutput] {
+	return NewToolDefinition[AnalyzeTableInput, AnalyzeTableOutput](
+		"analyze_table",
+		"Get table statistics (row count, size, column stats).",
+		func(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeTableInput) (*mcp.CallToolResult, AnalyzeTableOutput, error) {
+			return analyzeTableHandler(ctx, req, input, dbClient)
+		},
+	)
+}
+
+func analyzeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeTableInput, dbClient *client.DBClient) (*mcp.CallToolResult, AnalyzeTableOutput, error) {
 	sessionID := "default"
 	sessionState := state.GetOrCreateSession(sessionID, dbClient)
 	if sessionState == nil || sessionState.Conn == nil {
-		return nil, mcpdb.AnalyzeTableOutput{}, fmt.Errorf("no active DB connection in session")
+		return nil, AnalyzeTableOutput{}, fmt.Errorf("no active DB connection in session")
 	}
 
 	schema := input.Schema
@@ -30,16 +59,16 @@ func analyzeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input mc
 
 	stats, err := getTableStatistics(ctx, sessionState.Conn, input.TableName, schema)
 	if err != nil {
-		return nil, mcpdb.AnalyzeTableOutput{}, fmt.Errorf("failed to analyze table: %v", err)
+		return nil, AnalyzeTableOutput{}, fmt.Errorf("failed to analyze table: %v", err)
 	}
 
-	output := mcpdb.AnalyzeTableOutput{
+	output := AnalyzeTableOutput{
 		Stats: *stats,
 	}
 
 	jsonBytes, err := json.Marshal(output)
 	if err != nil {
-		return nil, mcpdb.AnalyzeTableOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+		return nil, AnalyzeTableOutput{}, fmt.Errorf("JSON marshal error: %v", err)
 	}
 
 	return &mcp.CallToolResult{
@@ -49,8 +78,8 @@ func analyzeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input mc
 	}, output, nil
 }
 
-func getTableStatistics(ctx context.Context, conn *sql.DB, tableName, schema string) (*mcpdb.TableStats, error) {
-	stats := &mcpdb.TableStats{
+func getTableStatistics(ctx context.Context, conn *sql.DB, tableName, schema string) (*TableStats, error) {
+	stats := &TableStats{
 		TableName:   tableName,
 		ColumnStats: make(map[string]string),
 	}

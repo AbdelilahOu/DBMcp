@@ -10,15 +10,39 @@ import (
 
 	"github.com/AbdelilahOu/DBMcp/internal/client"
 	"github.com/AbdelilahOu/DBMcp/internal/state"
-	"github.com/AbdelilahOu/DBMcp/pkg"
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb.ListTablesInput, dbClient *client.DBClient) (*mcp.CallToolResult, mcpdb.ListTablesOutput, error) {
+type ListTablesInput struct {
+	Schema string `json:"schema,omitempty" jsonschema_description:"Optional schema name to filter tables (defaults to 'public' for PostgreSQL)"`
+}
+
+type TableInfo struct {
+	Name   string `json:"name" jsonschema_description:"Table name"`
+	Schema string `json:"schema" jsonschema_description:"Schema name"`
+	Type   string `json:"type" jsonschema_description:"Table type (table, view, etc.)"`
+}
+
+type ListTablesOutput struct {
+	Tables []TableInfo `json:"tables" jsonschema_description:"Array of table information"`
+}
+
+func GetListTablesTool(dbClient *client.DBClient) *ToolDefinition[ListTablesInput, ListTablesOutput] {
+	return NewToolDefinition[ListTablesInput, ListTablesOutput](
+		"list_tables",
+		"List all tables in the database with metadata.",
+		func(ctx context.Context, req *mcp.CallToolRequest, input ListTablesInput) (*mcp.CallToolResult, ListTablesOutput, error) {
+			return listTablesHandler(ctx, req, input, dbClient)
+		},
+	)
+}
+
+func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input ListTablesInput, dbClient *client.DBClient) (*mcp.CallToolResult, ListTablesOutput, error) {
 	sessionID := "default"
 	sessionState := state.GetOrCreateSession(sessionID, dbClient)
 	if sessionState == nil || sessionState.Conn == nil {
-		return nil, mcpdb.ListTablesOutput{}, fmt.Errorf("no active DB connection in session")
+		return nil, ListTablesOutput{}, fmt.Errorf("no active DB connection in session")
 	}
 
 	schema := input.Schema
@@ -84,15 +108,15 @@ func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpd
 	}
 
 	if err != nil {
-		return nil, mcpdb.ListTablesOutput{}, fmt.Errorf("query error: %v", err)
+		return nil, ListTablesOutput{}, fmt.Errorf("query error: %v", err)
 	}
 	defer rows.Close()
 
-	var tables []mcpdb.TableInfo
+	var tables []TableInfo
 	for rows.Next() {
 		var name, schemaName, tableType string
 		if err := rows.Scan(&name, &schemaName, &tableType); err != nil {
-			return nil, mcpdb.ListTablesOutput{}, fmt.Errorf("scan error: %v", err)
+			return nil, ListTablesOutput{}, fmt.Errorf("scan error: %v", err)
 		}
 
 		normalizedType := strings.ToLower(tableType)
@@ -102,7 +126,7 @@ func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpd
 			normalizedType = "view"
 		}
 
-		tables = append(tables, mcpdb.TableInfo{
+		tables = append(tables, TableInfo{
 			Name:   name,
 			Schema: schemaName,
 			Type:   normalizedType,
@@ -110,14 +134,14 @@ func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpd
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, mcpdb.ListTablesOutput{}, fmt.Errorf("rows iteration error: %v", err)
+		return nil, ListTablesOutput{}, fmt.Errorf("rows iteration error: %v", err)
 	}
 
-	output := mcpdb.ListTablesOutput{Tables: tables}
+	output := ListTablesOutput{Tables: tables}
 
 	jsonBytes, err := json.Marshal(output)
 	if err != nil {
-		return nil, mcpdb.ListTablesOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+		return nil, ListTablesOutput{}, fmt.Errorf("JSON marshal error: %v", err)
 	}
 
 	return &mcp.CallToolResult{

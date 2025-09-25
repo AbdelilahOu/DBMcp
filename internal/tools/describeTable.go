@@ -10,15 +10,50 @@ import (
 
 	"github.com/AbdelilahOu/DBMcp/internal/client"
 	"github.com/AbdelilahOu/DBMcp/internal/state"
-	"github.com/AbdelilahOu/DBMcp/pkg"
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input mcpdb.DescribeTableInput, dbClient *client.DBClient) (*mcp.CallToolResult, mcpdb.DescribeTableOutput, error) {
+type DescribeTableInput struct {
+	TableName string `json:"table_name" jsonschema:"required" jsonschema_description:"Name of the table to describe"`
+	Schema    string `json:"schema,omitempty" jsonschema_description:"Optional schema name (defaults to 'public' for PostgreSQL)"`
+}
+
+type ColumnInfo struct {
+	Name          string `json:"name" jsonschema_description:"Column name"`
+	DataType      string `json:"data_type" jsonschema_description:"Data type of the column"`
+	IsNullable    bool   `json:"is_nullable" jsonschema_description:"Whether the column can contain NULL values"`
+	IsPrimaryKey  bool   `json:"is_primary_key" jsonschema_description:"Whether the column is part of the primary key"`
+	DefaultValue  string `json:"default_value,omitempty" jsonschema_description:"Default value for the column"`
+	CharMaxLength *int   `json:"char_max_length,omitempty" jsonschema_description:"Maximum length for character types"`
+}
+
+type IndexInfo struct {
+	Name     string   `json:"name" jsonschema_description:"Index name"`
+	Columns  []string `json:"columns" jsonschema_description:"Columns included in the index"`
+	IsUnique bool     `json:"is_unique" jsonschema_description:"Whether the index is unique"`
+}
+
+type DescribeTableOutput struct {
+	Columns []ColumnInfo `json:"columns" jsonschema_description:"Array of column information"`
+	Indexes []IndexInfo  `json:"indexes" jsonschema_description:"Array of index information"`
+}
+
+func GetDescribeTableTool(dbClient *client.DBClient) *ToolDefinition[DescribeTableInput, DescribeTableOutput] {
+	return NewToolDefinition[DescribeTableInput, DescribeTableOutput](
+		"describe_table",
+		"Get detailed information about table structure, columns, and indexes.",
+		func(ctx context.Context, req *mcp.CallToolRequest, input DescribeTableInput) (*mcp.CallToolResult, DescribeTableOutput, error) {
+			return describeTableHandler(ctx, req, input, dbClient)
+		},
+	)
+}
+
+func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input DescribeTableInput, dbClient *client.DBClient) (*mcp.CallToolResult, DescribeTableOutput, error) {
 	sessionID := "default"
 	sessionState := state.GetOrCreateSession(sessionID, dbClient)
 	if sessionState == nil || sessionState.Conn == nil {
-		return nil, mcpdb.DescribeTableOutput{}, fmt.Errorf("no active DB connection in session")
+		return nil, DescribeTableOutput{}, fmt.Errorf("no active DB connection in session")
 	}
 
 	schema := input.Schema
@@ -31,22 +66,22 @@ func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input m
 
 	columns, err := getTableColumns(ctx, sessionState.Conn, input.TableName, schema)
 	if err != nil {
-		return nil, mcpdb.DescribeTableOutput{}, fmt.Errorf("get columns error: %v", err)
+		return nil, DescribeTableOutput{}, fmt.Errorf("get columns error: %v", err)
 	}
 
 	indexes, err := getTableIndexes(ctx, sessionState.Conn, input.TableName, schema)
 	if err != nil {
-		return nil, mcpdb.DescribeTableOutput{}, fmt.Errorf("get indexes error: %v", err)
+		return nil, DescribeTableOutput{}, fmt.Errorf("get indexes error: %v", err)
 	}
 
-	output := mcpdb.DescribeTableOutput{
+	output := DescribeTableOutput{
 		Columns: columns,
 		Indexes: indexes,
 	}
 
 	jsonBytes, err := json.Marshal(output)
 	if err != nil {
-		return nil, mcpdb.DescribeTableOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+		return nil, DescribeTableOutput{}, fmt.Errorf("JSON marshal error: %v", err)
 	}
 
 	return &mcp.CallToolResult{
@@ -56,7 +91,7 @@ func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input m
 	}, output, nil
 }
 
-func getTableColumns(ctx context.Context, conn *sql.DB, tableName, schema string) ([]mcpdb.ColumnInfo, error) {
+func getTableColumns(ctx context.Context, conn *sql.DB, tableName, schema string) ([]ColumnInfo, error) {
 	pgQuery := `
 		SELECT
 			c.column_name,
@@ -99,9 +134,9 @@ func getTableColumns(ctx context.Context, conn *sql.DB, tableName, schema string
 	}
 	defer rows.Close()
 
-	var columns []mcpdb.ColumnInfo
+	var columns []ColumnInfo
 	for rows.Next() {
-		var col mcpdb.ColumnInfo
+		var col ColumnInfo
 		var charMaxLen sql.NullInt64
 
 		err := rows.Scan(
@@ -127,7 +162,7 @@ func getTableColumns(ctx context.Context, conn *sql.DB, tableName, schema string
 	return columns, rows.Err()
 }
 
-func getTableIndexes(ctx context.Context, conn *sql.DB, tableName, schema string) ([]mcpdb.IndexInfo, error) {
+func getTableIndexes(ctx context.Context, conn *sql.DB, tableName, schema string) ([]IndexInfo, error) {
 	pgQuery := `
 		SELECT
 			i.relname as index_name,
@@ -161,7 +196,7 @@ func getTableIndexes(ctx context.Context, conn *sql.DB, tableName, schema string
 	}
 	defer rows.Close()
 
-	var indexes []mcpdb.IndexInfo
+	var indexes []IndexInfo
 	for rows.Next() {
 		var indexName, columnsStr string
 		var isUnique bool
@@ -183,7 +218,7 @@ func getTableIndexes(ctx context.Context, conn *sql.DB, tableName, schema string
 			columns[i] = strings.TrimSpace(col)
 		}
 
-		indexes = append(indexes, mcpdb.IndexInfo{
+		indexes = append(indexes, IndexInfo{
 			Name:     indexName,
 			Columns:  columns,
 			IsUnique: isUnique,
