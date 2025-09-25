@@ -1,0 +1,40 @@
+{
+  "connections": {
+    "local_postgres": {
+      "name": "Local PostgreSQL",
+      "type": "postgres",
+      "url": "postgres://username:password@localhost:5432/database_name?sslmode=disable",
+      "description": "Local development PostgreSQL database"
+    },
+    "production_pg": {
+      "name": "Production PostgreSQL",
+      "type": "postgres",
+      "url": "postgres://prod_user:secure_password@prod-db.company.com:5432/production_db?sslmode=require",
+      "description": "Production PostgreSQL database - handle with care"
+    },
+    "dev_mysql": {
+      "name": "Development MySQL",
+      "type": "mysql",
+      "url": "mysql://dev_user:dev_password@localhost:3306/dev_database",
+      "description": "Local MySQL development database"
+    },
+    "analytics_readonly": {
+      "name": "Analytics (Read-Only)",
+      "type": "postgres",
+      "url": "postgres://readonly_user:readonly_pass@analytics.company.com:5432/analytics_db",
+      "description": "Read-only analytics database for reporting"
+    },
+    "staging_mysql": {
+      "name": "Staging MySQL",
+      "type": "mysql",
+      "url": "mysql://staging_user:staging_pass@staging-mysql.company.com:3306/staging_app?parseTime=true",
+      "description": "Staging environment MySQL database"
+    }
+  },
+  "default_connection": "local_postgres",
+  "settings": {
+    "query_timeout": "30s",
+    "max_connections": 10,
+    "connection_lifetime": "5m"
+  }
+}
