@@ -49,7 +49,7 @@ type StdioServerConfig struct {
 }
 
 func initializeConnection(conn config.Connection) error {
-	dbClient, err := client.NewDBClient(conn.URL)
+	dbClient, err := client.NewDBClient(conn.URL, conn.Type)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}

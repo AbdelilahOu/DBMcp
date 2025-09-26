@@ -5,12 +5,12 @@
       "args": [
         "stdio",
         "--connection",
-        "DCM4CHEE",
+        "OPENMRS",
         "--config",
         "C:\\Users\\abdel\\OneDrive\\Desktop\\Projects\\ai\\DBMcp\\connections.json"
       ],
       "env": {
-        "DB_CONN_STRING": "DCM4CHEE"
+        "DB_CONN_STRING": "OPENMRS"
       }
     }
   }

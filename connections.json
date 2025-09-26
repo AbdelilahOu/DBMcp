@@ -7,9 +7,9 @@
       "description": "DCM4CHEE instance in the vps"
     },
     "OPENMRS": {
-      "name": "OPENMRS-PostgreSQL",
+      "name": "OPENMRS-MySQL",
       "type": "mysql",
-      "url": "mysql://openmrs-user:password@192.168.100.60:3306/openmrs",
+      "url": "openmrs-user:password@tcp(192.168.100.60:3306)/openmrs?parseTime=true&timeout=30s",
       "description": "OPENMRS instance in the vps"
     },
     "OPENELIS": {

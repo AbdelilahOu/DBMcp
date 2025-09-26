@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strings"
 	"time"
 )
 
@@ -12,12 +11,7 @@ type DBClient struct {
 	DB *sql.DB
 }
 
-func NewDBClient(connString string) (*DBClient, error) {
-	driver := "postgres"
-	if strings.HasPrefix(strings.ToLower(connString), "mysql") {
-		driver = "mysql"
-	}
-
+func NewDBClient(connString, driver string) (*DBClient, error) {
 	db, err := sql.Open(driver, connString)
 	if err != nil {
 		return nil, fmt.Errorf("open %s: %w", driver, err)

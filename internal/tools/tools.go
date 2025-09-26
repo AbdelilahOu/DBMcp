@@ -35,6 +35,8 @@ func RegisterTools(s *mcp.Server, cfg *config.Config) {
 	GetDbInfoTool().Register(s)
 	// Execute Query Tool (only if not read-only)
 	GetExecuteQueryTool().Register(s)
+	// Select Query Tool
+	GetSelectQueryTool().Register(s)
 	// Explain Query Tool
 	GetExplainQueryTool().Register(s)
 	// Connection Management Tools (always available)

@@ -108,7 +108,7 @@ func switchConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, inpu
 		return nil, SwitchConnectionOutput{}, fmt.Errorf("connection '%s' not found", input.Connection)
 	}
 
-	dbClient, err := client.NewDBClient(conn.URL)
+	dbClient, err := client.NewDBClient(conn.URL, conn.Type)
 	if err != nil {
 		return nil, SwitchConnectionOutput{}, fmt.Errorf("failed to connect to '%s': %v", input.Connection, err)
 	}
@@ -163,7 +163,7 @@ func testConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, input 
 			return nil, TestConnectionOutput{}, fmt.Errorf("connection '%s' not found", input.Connection)
 		}
 
-		testClient, err = client.NewDBClient(conn.URL)
+		testClient, err = client.NewDBClient(conn.URL, conn.Type)
 		if err != nil {
 			output := TestConnectionOutput{
 				Success:    false,
