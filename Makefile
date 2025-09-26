@@ -1,7 +1,7 @@
 # DB MCP Server Makefile
 
 # Variables
-BINARY_NAME=db-mcp-server.exe
+BINARY_NAME=DBMcp.exe
 BUILD_DIR=bin
 GO_FILES=$(shell find . -name '*.go' -type f)
 DB_URL=postgresql://postgres:postgres@localhost:5432/woco360?sslmode=disable
