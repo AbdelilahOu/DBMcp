@@ -37,6 +37,8 @@ func RegisterTools(s *mcp.Server, cfg *config.Config) {
 	GetExecuteQueryTool().Register(s)
 	// Select Query Tool
 	GetSelectQueryTool().Register(s)
+	// Show Query Tool
+	GetShowQueryTool().Register(s)
 	// Explain Query Tool
 	GetExplainQueryTool().Register(s)
 	// Connection Management Tools (always available)
