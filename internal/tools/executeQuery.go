@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AbdelilahOu/DBMcp/internal/logger"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -47,7 +48,9 @@ func executeQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input Ex
 	defer cancel()
 
 	result, err := sessionState.Conn.ExecContext(ctx, input.Query)
+
 	if err != nil {
+		logger.LogDatabaseOperation("EXECUTE", input.Query, 0, err)
 		return nil, ExecuteQueryOutput{}, fmt.Errorf("query execution error: %v", err)
 	}
 
@@ -73,6 +76,9 @@ func executeQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input Ex
 	default:
 		operation = "QUERY"
 	}
+
+	// Log successful database operation
+	logger.LogDatabaseOperation(operation, input.Query, rowsAffected, nil)
 
 	message := fmt.Sprintf("%s operation completed successfully", operation)
 	if rowsAffected > 0 {

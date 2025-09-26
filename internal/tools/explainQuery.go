@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AbdelilahOu/DBMcp/internal/logger"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -29,6 +30,7 @@ func GetExplainQueryTool() *ToolDefinition[ExplainQueryInput, ExplainQueryOutput
 }
 
 func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input ExplainQueryInput) (*mcp.CallToolResult, ExplainQueryOutput, error) {
+
 	sessionState, err := getActiveSession("default")
 	if err != nil {
 		return nil, ExplainQueryOutput{}, err
@@ -61,6 +63,8 @@ func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input Ex
 				explainQuery = fmt.Sprintf("EXPLAIN %s", query)
 				rows, err = sessionState.Conn.QueryContext(ctx, explainQuery)
 				if err != nil {
+
+					logger.LogDatabaseOperation("EXPLAIN", input.Query, 0, err)
 					return nil, ExplainQueryOutput{}, fmt.Errorf("failed to explain query: %v", err)
 				}
 			}
@@ -125,6 +129,8 @@ func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input Ex
 			}
 		}
 	}
+
+	logger.LogDatabaseOperation("EXPLAIN", input.Query, int64(len(planLines)), nil)
 
 	output := ExplainQueryOutput{
 		Plan: plan,

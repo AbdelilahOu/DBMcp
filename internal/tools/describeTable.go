@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AbdelilahOu/DBMcp/internal/logger"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -47,6 +48,7 @@ func GetDescribeTableTool() *ToolDefinition[DescribeTableInput, DescribeTableOut
 }
 
 func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input DescribeTableInput) (*mcp.CallToolResult, DescribeTableOutput, error) {
+
 	sessionState, err := getActiveSession("default")
 	if err != nil {
 		return nil, DescribeTableOutput{}, err
@@ -54,7 +56,14 @@ func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input D
 
 	schema := input.Schema
 	if schema == "" {
-		schema = "public"
+		// Get current database/schema
+		var currentSchema string
+		err := sessionState.Conn.QueryRow("SELECT DATABASE()").Scan(&currentSchema)
+		if err != nil {
+			// Fallback to 'public' for PostgreSQL
+			currentSchema = "public"
+		}
+		schema = currentSchema
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -62,13 +71,19 @@ func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input D
 
 	columns, err := getTableColumns(ctx, sessionState.Conn, input.TableName, schema)
 	if err != nil {
+
+		logger.LogDatabaseOperation("DESCRIBE_TABLE", fmt.Sprintf("DESCRIBE %s.%s", schema, input.TableName), 0, err)
 		return nil, DescribeTableOutput{}, fmt.Errorf("get columns error: %v", err)
 	}
 
 	indexes, err := getTableIndexes(ctx, sessionState.Conn, input.TableName, schema)
 	if err != nil {
+
+		logger.LogDatabaseOperation("DESCRIBE_TABLE", fmt.Sprintf("DESCRIBE %s.%s", schema, input.TableName), 0, err)
 		return nil, DescribeTableOutput{}, fmt.Errorf("get indexes error: %v", err)
 	}
+
+	logger.LogDatabaseOperation("DESCRIBE_TABLE", fmt.Sprintf("DESCRIBE %s.%s", schema, input.TableName), int64(len(columns)), nil)
 
 	output := DescribeTableOutput{
 		Columns: columns,

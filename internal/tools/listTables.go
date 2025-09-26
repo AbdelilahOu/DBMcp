@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AbdelilahOu/DBMcp/internal/logger"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -104,6 +105,7 @@ func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input List
 	}
 
 	if err != nil {
+		logger.LogDatabaseOperation("LIST_TABLES", query, 0, err)
 		return nil, ListTablesOutput{}, fmt.Errorf("query error: %v", err)
 	}
 	defer rows.Close()
@@ -132,6 +134,9 @@ func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input List
 	if err = rows.Err(); err != nil {
 		return nil, ListTablesOutput{}, fmt.Errorf("rows iteration error: %v", err)
 	}
+
+	// Log successful database operation
+	logger.LogDatabaseOperation("LIST_TABLES", query, int64(len(tables)), nil)
 
 	output := ListTablesOutput{Tables: tables}
 

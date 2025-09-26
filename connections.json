@@ -24,5 +24,11 @@
     "query_timeout": "30s",
     "max_connections": 10,
     "connection_lifetime": "5m"
+  },
+  "logging": {
+    "level": "INFO",
+    "output_file": "logs/dbmcp.log",
+    "max_size_mb": 10,
+    "console": true
   }
 }

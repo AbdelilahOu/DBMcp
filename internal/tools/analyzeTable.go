@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/AbdelilahOu/DBMcp/internal/logger"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -40,6 +41,7 @@ func GetAnalyzeTableTool() *ToolDefinition[AnalyzeTableInput, AnalyzeTableOutput
 }
 
 func analyzeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeTableInput) (*mcp.CallToolResult, AnalyzeTableOutput, error) {
+
 	sessionState, err := getActiveSession("default")
 	if err != nil {
 		return nil, AnalyzeTableOutput{}, err
@@ -54,9 +56,13 @@ func analyzeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input An
 	defer cancel()
 
 	stats, err := getTableStatistics(ctx, sessionState.Conn, input.TableName, schema)
+
 	if err != nil {
+		logger.LogDatabaseOperation("ANALYZE_TABLE", fmt.Sprintf("ANALYZE %s.%s", schema, input.TableName), 0, err)
 		return nil, AnalyzeTableOutput{}, fmt.Errorf("failed to analyze table: %v", err)
 	}
+
+	logger.LogDatabaseOperation("ANALYZE_TABLE", fmt.Sprintf("ANALYZE %s.%s", schema, input.TableName), stats.RowCount, nil)
 
 	output := AnalyzeTableOutput{
 		Stats: *stats,

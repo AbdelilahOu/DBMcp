@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 
+	"github.com/AbdelilahOu/DBMcp/internal/logger"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -25,5 +26,14 @@ func NewToolDefinition[TInput, TOutput any](
 }
 
 func (td *ToolDefinition[TInput, TOutput]) Register(s *mcp.Server) {
-	mcp.AddTool(s, td.Tool, td.Handler)
+	wrappedHandler := func(ctx context.Context, req *mcp.CallToolRequest, input TInput) (*mcp.CallToolResult, TOutput, error) {
+
+		result, output, err := td.Handler(ctx, req, input)
+
+		logger.LogToolCall(td.Tool.Name, input, output, err)
+
+		return result, output, err
+	}
+
+	mcp.AddTool(s, td.Tool, wrappedHandler)
 }

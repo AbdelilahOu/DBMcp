@@ -13,9 +13,17 @@ type Connection struct {
 	Description string `json:"description"`
 }
 
+type LoggingConfig struct {
+	Level      string `json:"level"`
+	OutputFile string `json:"output_file"`
+	MaxSizeMB  int64  `json:"max_size_mb"`
+	Console    bool   `json:"console"`
+}
+
 type Config struct {
 	Connections       map[string]Connection `json:"connections"`
 	DefaultConnection string                `json:"default_connection"`
+	Logging           LoggingConfig         `json:"logging"`
 }
 
 func LoadConfig(configPath string) (*Config, error) {
@@ -61,6 +69,20 @@ func loadConfigFromFile(path string) (*Config, error) {
 	var config Config
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %v", err)
+	}
+
+	if config.Logging.Level == "" {
+		config.Logging.Level = "INFO"
+	}
+	if config.Logging.OutputFile == "" {
+		config.Logging.OutputFile = "dbmcp.log"
+	}
+	if config.Logging.MaxSizeMB == 0 {
+		config.Logging.MaxSizeMB = 10
+	}
+
+	if config.Logging.OutputFile != "" {
+		config.Logging.Console = true
 	}
 
 	for name, conn := range config.Connections {

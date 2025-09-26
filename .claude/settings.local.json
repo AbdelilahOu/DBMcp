@@ -1,6 +1,19 @@
 {
+  "permissions": {
+    "allow": [
+      "mcp__database__list_connections",
+      "mcp__database__test_connection",
+      "mcp__database__get_db_info",
+      "mcp__database__switch_connection",
+      "mcp__database__describe_table",
+      "mcp__database__analyze_table",
+      "mcp__database__select_query",
+      "mcp__database__execute_query",
+      "mcp__database__explain_query"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "database"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

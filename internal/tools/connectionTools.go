@@ -7,6 +7,7 @@ import (
 
 	"github.com/AbdelilahOu/DBMcp/internal/client"
 	"github.com/AbdelilahOu/DBMcp/internal/config"
+	"github.com/AbdelilahOu/DBMcp/internal/logger"
 	"github.com/AbdelilahOu/DBMcp/internal/state"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -110,16 +111,21 @@ func switchConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, inpu
 
 	dbClient, err := client.NewDBClient(conn.URL, conn.Type)
 	if err != nil {
+		logger.LogConnectionEvent("switch_connection", input.Connection, conn.Type, err)
 		return nil, SwitchConnectionOutput{}, fmt.Errorf("failed to connect to '%s': %v", input.Connection, err)
 	}
 
 	sessionID := "default"
 	sessionState := state.GetOrCreateSession(sessionID, dbClient)
 	if sessionState == nil {
+		logger.LogConnectionEvent("switch_connection", input.Connection, conn.Type, fmt.Errorf("failed to create session"))
 		return nil, SwitchConnectionOutput{}, fmt.Errorf("failed to create session")
 	}
 
 	sessionState.Conn = dbClient.DB
+
+	// Log successful connection switch
+	logger.LogConnectionEvent("switch_connection", input.Connection, conn.Type, nil)
 
 	output := SwitchConnectionOutput{
 		Message:    fmt.Sprintf("Successfully switched to connection '%s'", input.Connection),
@@ -165,6 +171,7 @@ func testConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, input 
 
 		testClient, err = client.NewDBClient(conn.URL, conn.Type)
 		if err != nil {
+			logger.LogConnectionEvent("test_connection", input.Connection, conn.Type, err)
 			output := TestConnectionOutput{
 				Success:    false,
 				Message:    fmt.Sprintf("Connection test failed: %v", err),
@@ -199,6 +206,7 @@ func testConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, input 
 		}
 
 		if err := sessionState.Conn.Ping(); err != nil {
+			logger.LogConnectionEvent("test_connection", "current", "unknown", err)
 			output := TestConnectionOutput{
 				Success:    false,
 				Message:    fmt.Sprintf("Connection test failed: %v", err),
@@ -215,6 +223,9 @@ func testConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, input 
 
 		connectionName = "current"
 	}
+
+	// Log successful connection test
+	logger.LogConnectionEvent("test_connection", connectionName, "unknown", nil)
 
 	output := TestConnectionOutput{
 		Success:    true,

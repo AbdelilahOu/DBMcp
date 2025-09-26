@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AbdelilahOu/DBMcp/internal/logger"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -44,7 +45,9 @@ func selectQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input Sel
 	defer cancel()
 
 	rows, err := sessionState.Conn.QueryContext(ctx, input.Query)
+
 	if err != nil {
+		logger.LogDatabaseOperation("SELECT", input.Query, 0, err)
 		return nil, SelectQueryOutput{}, fmt.Errorf("query execution error: %v", err)
 	}
 	defer rows.Close()
@@ -81,6 +84,9 @@ func selectQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input Sel
 	if err = rows.Err(); err != nil {
 		return nil, SelectQueryOutput{}, fmt.Errorf("error iterating rows: %v", err)
 	}
+
+	// Log successful database operation
+	logger.LogDatabaseOperation("SELECT", input.Query, int64(len(results)), nil)
 
 	message := fmt.Sprintf("SELECT query completed successfully (%d rows returned)", len(results))
 

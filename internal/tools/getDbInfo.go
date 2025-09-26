@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AbdelilahOu/DBMcp/internal/logger"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -31,6 +32,7 @@ func GetDbInfoTool() *ToolDefinition[GetDBInfoInput, GetDBInfoOutput] {
 }
 
 func getDBInfoHandler(ctx context.Context, req *mcp.CallToolRequest, input GetDBInfoInput) (*mcp.CallToolResult, GetDBInfoOutput, error) {
+
 	sessionState, err := getActiveSession("default")
 	if err != nil {
 		return nil, GetDBInfoOutput{}, err
@@ -106,6 +108,8 @@ func getDBInfoHandler(ctx context.Context, req *mcp.CallToolRequest, input GetDB
 		Schemas:      schemas,
 		TableCount:   tableCount,
 	}
+
+	logger.LogDatabaseOperation("GET_DB_INFO", "Database information query", int64(tableCount), nil)
 
 	jsonBytes, err := json.Marshal(output)
 	if err != nil {
