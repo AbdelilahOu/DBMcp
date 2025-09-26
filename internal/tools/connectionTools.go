@@ -45,30 +45,24 @@ type TestConnectionOutput struct {
 	Connection string `json:"connection" jsonschema_description:"Connection that was tested"`
 }
 
-var GlobalConfig *config.Config
-
-func GetListConnectionsTool() *ToolDefinition[ListConnectionsInput, ListConnectionsOutput] {
+func GetListConnectionsTool(cfg *config.Config) *ToolDefinition[ListConnectionsInput, ListConnectionsOutput] {
 	return NewToolDefinition[ListConnectionsInput, ListConnectionsOutput](
 		"list_connections",
 		"List all available named connections from config.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListConnectionsInput) (*mcp.CallToolResult, ListConnectionsOutput, error) {
-			return listConnectionsHandler(ctx, req, input)
+			return listConnectionsHandler(ctx, req, input, cfg)
 		},
 	)
 }
 
-func listConnectionsHandler(ctx context.Context, req *mcp.CallToolRequest, input ListConnectionsInput) (*mcp.CallToolResult, ListConnectionsOutput, error) {
-	if GlobalConfig == nil {
-		cfg, err := config.LoadConfig()
-		if err != nil {
-			return nil, ListConnectionsOutput{}, fmt.Errorf("failed to load config: %v", err)
-		}
-		GlobalConfig = cfg
+func listConnectionsHandler(ctx context.Context, req *mcp.CallToolRequest, input ListConnectionsInput, cfg *config.Config) (*mcp.CallToolResult, ListConnectionsOutput, error) {
+	if cfg == nil {
+		return nil, ListConnectionsOutput{}, fmt.Errorf("config not loaded - server must be started with a valid config file")
 	}
 
-	connections := make([]ConnectionInfo, 0, len(GlobalConfig.Connections))
+	connections := make([]ConnectionInfo, 0, len(cfg.Connections))
 
-	for name, conn := range GlobalConfig.Connections {
+	for name, conn := range cfg.Connections {
 		connections = append(connections, ConnectionInfo{
 			Name:        name,
 			DisplayName: conn.Name,
@@ -79,7 +73,7 @@ func listConnectionsHandler(ctx context.Context, req *mcp.CallToolRequest, input
 
 	output := ListConnectionsOutput{
 		Connections:       connections,
-		DefaultConnection: GlobalConfig.DefaultConnection,
+		DefaultConnection: cfg.DefaultConnection,
 	}
 
 	jsonBytes, err := json.Marshal(output)
@@ -94,26 +88,22 @@ func listConnectionsHandler(ctx context.Context, req *mcp.CallToolRequest, input
 	}, output, nil
 }
 
-func GetSwitchConnectionTool() *ToolDefinition[SwitchConnectionInput, SwitchConnectionOutput] {
+func GetSwitchConnectionTool(cfg *config.Config) *ToolDefinition[SwitchConnectionInput, SwitchConnectionOutput] {
 	return NewToolDefinition[SwitchConnectionInput, SwitchConnectionOutput](
 		"switch_connection",
 		"Switch to a different database connection during the session.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input SwitchConnectionInput) (*mcp.CallToolResult, SwitchConnectionOutput, error) {
-			return switchConnectionHandler(ctx, req, input)
+			return switchConnectionHandler(ctx, req, input, cfg)
 		},
 	)
 }
 
-func switchConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, input SwitchConnectionInput) (*mcp.CallToolResult, SwitchConnectionOutput, error) {
-	if GlobalConfig == nil {
-		cfg, err := config.LoadConfig()
-		if err != nil {
-			return nil, SwitchConnectionOutput{}, fmt.Errorf("failed to load config: %v", err)
-		}
-		GlobalConfig = cfg
+func switchConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, input SwitchConnectionInput, cfg *config.Config) (*mcp.CallToolResult, SwitchConnectionOutput, error) {
+	if cfg == nil {
+		return nil, SwitchConnectionOutput{}, fmt.Errorf("config not loaded - server must be started with a valid config file")
 	}
 
-	conn, exists := GlobalConfig.GetConnection(input.Connection)
+	conn, exists := cfg.GetConnection(input.Connection)
 	if !exists {
 		return nil, SwitchConnectionOutput{}, fmt.Errorf("connection '%s' not found", input.Connection)
 	}
@@ -148,31 +138,27 @@ func switchConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, inpu
 	}, output, nil
 }
 
-func GetTestConnectionTool() *ToolDefinition[TestConnectionInput, TestConnectionOutput] {
+func GetTestConnectionTool(cfg *config.Config) *ToolDefinition[TestConnectionInput, TestConnectionOutput] {
 	return NewToolDefinition[TestConnectionInput, TestConnectionOutput](
 		"test_connection",
 		"Test connectivity to a database before executing queries.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input TestConnectionInput) (*mcp.CallToolResult, TestConnectionOutput, error) {
-			return testConnectionHandler(ctx, req, input)
+			return testConnectionHandler(ctx, req, input, cfg)
 		},
 	)
 }
 
-func testConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, input TestConnectionInput) (*mcp.CallToolResult, TestConnectionOutput, error) {
+func testConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, input TestConnectionInput, cfg *config.Config) (*mcp.CallToolResult, TestConnectionOutput, error) {
 	var connectionName string
 	var testClient *client.DBClient
 	var err error
 
 	if input.Connection != "" {
-		if GlobalConfig == nil {
-			cfg, err := config.LoadConfig()
-			if err != nil {
-				return nil, TestConnectionOutput{}, fmt.Errorf("failed to load config: %v", err)
-			}
-			GlobalConfig = cfg
+		if cfg == nil {
+			return nil, TestConnectionOutput{}, fmt.Errorf("config not loaded - server must be started with a valid config file")
 		}
 
-		conn, exists := GlobalConfig.GetConnection(input.Connection)
+		conn, exists := cfg.GetConnection(input.Connection)
 		if !exists {
 			return nil, TestConnectionOutput{}, fmt.Errorf("connection '%s' not found", input.Connection)
 		}

@@ -6,7 +6,6 @@ import (
 
 	"github.com/AbdelilahOu/DBMcp/internal/config"
 	"github.com/AbdelilahOu/DBMcp/internal/server"
-	"github.com/AbdelilahOu/DBMcp/internal/tools"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +24,7 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().StringP("connection", "n", "", "Named connection from config file")
-	rootCmd.PersistentFlags().BoolP("read-only", "r", false, "Enable read-only mode (SELECT only)")
+	rootCmd.PersistentFlags().StringP("config", "c", "", "connections config file path")
 
 	stdioCmd := &cobra.Command{
 		Use:   "stdio",
@@ -37,16 +36,16 @@ func init() {
 
 func runStdioServer(cmd *cobra.Command, args []string) error {
 	connection, _ := cmd.Flags().GetString("connection")
+	configPath, _ := cmd.Flags().GetString("config")
 
 	var initialConnection string
 
 	// Load config and set global config for tools to use
-	cfg, err := config.LoadConfig()
+	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		fmt.Printf("Warning: Failed to load config: %v\n", err)
 		fmt.Println("Server will start without connections. Use list_connections and switch_connection tools.")
 	} else {
-		tools.GlobalConfig = cfg
 		if connection != "" {
 			// User explicitly specified a connection
 			if _, exists := cfg.GetConnection(connection); exists {
@@ -71,5 +70,6 @@ func runStdioServer(cmd *cobra.Command, args []string) error {
 	return server.RunStdioServer(server.StdioServerConfig{
 		Version:           "v0.1.0",
 		InitialConnection: initialConnection,
+		Config:            cfg,
 	})
 }

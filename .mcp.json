@@ -2,9 +2,15 @@
   "mcpServers": {
     "database": {
       "command": "C:\\Users\\abdel\\OneDrive\\Desktop\\Projects\\ai\\DBMcp\\bin\\DBMcp.exe",
-      "args": ["stdio", "--connection", "Woco360"],
+      "args": [
+        "stdio",
+        "--connection",
+        "DCM4CHEE",
+        "--config",
+        "C:\\Users\\abdel\\OneDrive\\Desktop\\Projects\\ai\\DBMcp\\connections.json"
+      ],
       "env": {
-        "DB_CONN_STRING": "Woco360"
+        "DB_CONN_STRING": "DCM4CHEE"
       }
     }
   }

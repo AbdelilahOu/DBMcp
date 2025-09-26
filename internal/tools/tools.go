@@ -3,6 +3,7 @@ package tools
 import (
 	"fmt"
 
+	"github.com/AbdelilahOu/DBMcp/internal/config"
 	"github.com/AbdelilahOu/DBMcp/internal/state"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -25,7 +26,7 @@ func getActiveSession(sessionID string) (*state.DBSessionState, error) {
 	return sessionState, nil
 }
 
-func RegisterTools(s *mcp.Server) {
+func RegisterTools(s *mcp.Server, cfg *config.Config) {
 	// List Tables Tool
 	GetListTablesTool().Register(s)
 	// Describe Table Tool
@@ -37,9 +38,9 @@ func RegisterTools(s *mcp.Server) {
 	// Explain Query Tool
 	GetExplainQueryTool().Register(s)
 	// Connection Management Tools (always available)
-	GetListConnectionsTool().Register(s)
-	GetSwitchConnectionTool().Register(s)
-	GetTestConnectionTool().Register(s)
+	GetListConnectionsTool(cfg).Register(s)
+	GetSwitchConnectionTool(cfg).Register(s)
+	GetTestConnectionTool(cfg).Register(s)
 	// Analyze Table Tool
 	GetAnalyzeTableTool().Register(s)
 }

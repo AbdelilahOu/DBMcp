@@ -1,13 +1,25 @@
 {
   "connections": {
-    "Woco360": {
-      "name": "Woco360-PostgreSQL",
+    "DCM4CHEE": {
+      "name": "DCM4CHEE-PostgreSQL",
       "type": "postgres",
-      "url": "postgresql://postgres:postgres@localhost:5432/woco360?sslmode=disable",
-      "description": "Local development PostgreSQL database for woco360"
+      "url": "postgresql://pacs:pacs@192.168.100.60:5432/pacsdb?sslmode=disable",
+      "description": "DCM4CHEE instance in the vps"
+    },
+    "OPENMRS": {
+      "name": "OPENMRS-PostgreSQL",
+      "type": "mysql",
+      "url": "mysql://openmrs-user:password@192.168.100.60:3306/openmrs",
+      "description": "OPENMRS instance in the vps"
+    },
+    "OPENELIS": {
+      "name": "OPENELIS-PostgreSQL",
+      "type": "postgres",
+      "url": "postgresql://clinlims:clinlims@192.168.100.60:2345/clinlims?sslmode=disable",
+      "description": "OPENELIS instance in the vps"
     }
   },
-  "default_connection": "Woco360",
+  "default_connection": "DCM4CHEE",
   "settings": {
     "query_timeout": "30s",
     "max_connections": 10,

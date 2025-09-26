@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
-	"runtime"
 )
 
 type Connection struct {
@@ -20,22 +18,13 @@ type Config struct {
 	DefaultConnection string                `json:"default_connection"`
 }
 
-func LoadConfig() (*Config, error) {
-	configPaths := getConfigPaths()
-
-	for _, path := range configPaths {
-		if _, err := os.Stat(path); err == nil {
-			config, err := loadConfigFromFile(path)
-			if err != nil {
-				continue
-			}
-			return config, nil
-		}
+func LoadConfig(configPath string) (*Config, error) {
+	config, err := loadConfigFromFile(configPath)
+	if err != nil {
+		return nil, err
 	}
+	return config, nil
 
-	return &Config{
-		Connections: make(map[string]Connection),
-	}, nil
 }
 
 func (c *Config) GetConnection(name string) (Connection, bool) {
@@ -61,30 +50,6 @@ func (c *Config) ValidateConnection(conn Connection) error {
 		return fmt.Errorf("connection URL is required")
 	}
 	return nil
-}
-
-func getConfigPaths() []string {
-	var paths []string
-
-	switch runtime.GOOS {
-	case "windows":
-		appData := os.Getenv("APPDATA")
-		if appData != "" {
-			paths = append(paths, filepath.Join(appData, "db-mcp", "connections.json"))
-		}
-	default:
-
-		homeDir := os.Getenv("HOME")
-		if homeDir != "" {
-			paths = append(paths, filepath.Join(homeDir, ".config", "db-mcp", "connections.json"))
-		}
-	}
-
-	if pwd, err := os.Getwd(); err == nil {
-		paths = append(paths, filepath.Join(pwd, "connections.json"))
-	}
-
-	return paths
 }
 
 func loadConfigFromFile(path string) (*Config, error) {

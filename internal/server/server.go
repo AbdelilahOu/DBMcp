@@ -17,6 +17,7 @@ import (
 type MCPServerConfig struct {
 	Version           string
 	InitialConnection string
+	Config            *config.Config
 }
 
 func NewMCPServer(cfg MCPServerConfig) (*mcp.Server, error) {
@@ -25,14 +26,18 @@ func NewMCPServer(cfg MCPServerConfig) (*mcp.Server, error) {
 
 	// Initialize connection if specified
 	if cfg.InitialConnection != "" {
-		err := initializeConnection(cfg.InitialConnection)
+		conn, exists := cfg.Config.GetConnection(cfg.InitialConnection)
+		if !exists {
+			return nil, fmt.Errorf("connection '%s' not found in config", cfg.InitialConnection)
+		}
+		err := initializeConnection(conn)
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize connection '%s': %w", cfg.InitialConnection, err)
 		}
 		fmt.Printf("Successfully initialized connection: %s\n", cfg.InitialConnection)
 	}
 
-	tools.RegisterTools(server)
+	tools.RegisterTools(server, cfg.Config)
 
 	return server, nil
 }
@@ -40,22 +45,10 @@ func NewMCPServer(cfg MCPServerConfig) (*mcp.Server, error) {
 type StdioServerConfig struct {
 	Version           string
 	InitialConnection string
+	Config            *config.Config
 }
 
-func initializeConnection(connectionName string) error {
-	if tools.GlobalConfig == nil {
-		cfg, err := config.LoadConfig()
-		if err != nil {
-			return fmt.Errorf("failed to load config: %w", err)
-		}
-		tools.GlobalConfig = cfg
-	}
-
-	conn, exists := tools.GlobalConfig.GetConnection(connectionName)
-	if !exists {
-		return fmt.Errorf("connection '%s' not found in config", connectionName)
-	}
-
+func initializeConnection(conn config.Connection) error {
 	dbClient, err := client.NewDBClient(conn.URL)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
@@ -81,6 +74,7 @@ func RunStdioServer(cfg StdioServerConfig) error {
 	server, err := NewMCPServer(MCPServerConfig{
 		Version:           cfg.Version,
 		InitialConnection: cfg.InitialConnection,
+		Config:            cfg.Config,
 	})
 
 	if err != nil {
