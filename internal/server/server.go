@@ -16,7 +16,6 @@ import (
 
 type MCPServerConfig struct {
 	Version           string
-	DBUrl             string
 	InitialConnection string
 }
 
