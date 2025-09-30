@@ -29,7 +29,7 @@ type ListTablesOutput struct {
 func GetListTablesTool() *ToolDefinition[ListTablesInput, ListTablesOutput] {
 	return NewToolDefinition[ListTablesInput, ListTablesOutput](
 		"list_tables",
-		"List all tables in the database with metadata.",
+		"Get a list of all tables and views in the database or a specific schema. Returns table names, schemas, and types (table/view). Use this when you need to discover what tables exist or find a specific table name. For detailed information about a specific table use describe_table or analyze_table.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListTablesInput) (*mcp.CallToolResult, ListTablesOutput, error) {
 			return listTablesHandler(ctx, req, input)
 		},

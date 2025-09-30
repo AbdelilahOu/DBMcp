@@ -33,7 +33,7 @@ type AnalyzeTableOutput struct {
 func GetAnalyzeTableTool() *ToolDefinition[AnalyzeTableInput, AnalyzeTableOutput] {
 	return NewToolDefinition[AnalyzeTableInput, AnalyzeTableOutput](
 		"analyze_table",
-		"Get table statistics (row count, size, column stats).",
+		"PREFERRED tool for getting table metadata and statistics including row count, table size, index size, and column information. Use this instead of SELECT COUNT(*) queries for counting rows or getting table overview information. This tool is optimized for metadata retrieval and doesn't execute full table scans.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeTableInput) (*mcp.CallToolResult, AnalyzeTableOutput, error) {
 			return analyzeTableHandler(ctx, req, input)
 		},

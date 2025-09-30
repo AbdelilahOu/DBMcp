@@ -22,7 +22,7 @@ type ExplainQueryOutput struct {
 func GetExplainQueryTool() *ToolDefinition[ExplainQueryInput, ExplainQueryOutput] {
 	return NewToolDefinition[ExplainQueryInput, ExplainQueryOutput](
 		"explain_query",
-		"Get query execution plan for performance analysis.",
+		"Analyze query execution plan and performance characteristics. Use this tool ONLY when explicitly asked about query performance, optimization, or execution plans. This shows how the database will execute a query (indexes used, join strategies, etc.) but does not return actual data or metadata.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ExplainQueryInput) (*mcp.CallToolResult, ExplainQueryOutput, error) {
 			return explainQueryHandler(ctx, req, input)
 		},
