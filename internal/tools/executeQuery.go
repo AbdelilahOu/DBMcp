@@ -23,7 +23,7 @@ type ExecuteQueryOutput struct {
 func GetExecuteQueryTool() *ToolDefinition[ExecuteQueryInput, ExecuteQueryOutput] {
 	return NewToolDefinition[ExecuteQueryInput, ExecuteQueryOutput](
 		"execute_query",
-		"Execute any SQL query (INSERT, UPDATE, DELETE, etc.) with proper permissions.",
+		"Execute data modification queries (INSERT, UPDATE, DELETE) and DDL statements (CREATE, ALTER, DROP). This tool changes database state and should only be used when you need to modify data or schema. DO NOT use for reading data (use select_query) or getting metadata (use describe_table, analyze_table, or list_tables).",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ExecuteQueryInput) (*mcp.CallToolResult, ExecuteQueryOutput, error) {
 			return executeQueryHandler(ctx, req, input)
 		},

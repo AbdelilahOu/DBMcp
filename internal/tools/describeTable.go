@@ -40,7 +40,7 @@ type DescribeTableOutput struct {
 func GetDescribeTableTool() *ToolDefinition[DescribeTableInput, DescribeTableOutput] {
 	return NewToolDefinition[DescribeTableInput, DescribeTableOutput](
 		"describe_table",
-		"Get detailed information about table structure, columns, and indexes.",
+		"Get detailed schema information about a table's structure including column definitions (names, data types, nullability, primary keys, default values) and indexes. Use this when you need to understand the table's schema design, not for getting data or statistics. For row counts and sizes use analyze_table instead.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input DescribeTableInput) (*mcp.CallToolResult, DescribeTableOutput, error) {
 			return describeTableHandler(ctx, req, input)
 		},

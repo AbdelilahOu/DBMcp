@@ -24,7 +24,7 @@ type GetDBInfoOutput struct {
 func GetDbInfoTool() *ToolDefinition[GetDBInfoInput, GetDBInfoOutput] {
 	return NewToolDefinition[GetDBInfoInput, GetDBInfoOutput](
 		"get_db_info",
-		"Get general database information and statistics.",
+		"Get high-level database overview including database name, version, available schemas, and total table count. Use this as the starting point when exploring an unfamiliar database or when asked general questions about the database. For specific table information use list_tables, describe_table, or analyze_table instead.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetDBInfoInput) (*mcp.CallToolResult, GetDBInfoOutput, error) {
 			return getDBInfoHandler(ctx, req, input)
 		},

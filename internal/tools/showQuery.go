@@ -23,7 +23,7 @@ type ShowQueryOutput struct {
 func GetShowQueryTool() *ToolDefinition[ShowQueryInput, ShowQueryOutput] {
 	return NewToolDefinition[ShowQueryInput, ShowQueryOutput](
 		"show_query",
-		"Execute SHOW SQL queries to display database metadata (tables, columns, databases, etc.).",
+		"Execute SHOW commands for database settings and metadata (MySQL: SHOW TABLES, SHOW DATABASES, SHOW COLUMNS; PostgreSQL: SHOW server_version, SHOW search_path, etc.). Use this when you need raw SHOW command output or database configuration settings. For database-agnostic metadata operations, prefer list_tables, describe_table, or get_db_info instead.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ShowQueryInput) (*mcp.CallToolResult, ShowQueryOutput, error) {
 			return showQueryHandler(ctx, req, input)
 		},

@@ -23,7 +23,7 @@ type SelectQueryOutput struct {
 func GetSelectQueryTool() *ToolDefinition[SelectQueryInput, SelectQueryOutput] {
 	return NewToolDefinition[SelectQueryInput, SelectQueryOutput](
 		"select_query",
-		"Execute SELECT SQL queries and return result data.",
+		"Execute SELECT SQL queries to retrieve actual data rows from tables. Use this tool when you need to see specific column values, filter data with WHERE clauses, or perform joins. DO NOT use this for counting rows (use analyze_table instead) or getting table metadata (use describe_table instead). Only use this when you need to examine or return the actual data content.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input SelectQueryInput) (*mcp.CallToolResult, SelectQueryOutput, error) {
 			return selectQueryHandler(ctx, req, input)
 		},
