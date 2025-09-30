@@ -10,7 +10,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "db-mcp-server",
+	Use:   "DBMcp",
 	Short: "DB MCP Server for querying Postgres/MySQL",
 	Long:  `A Model Context Protocol (MCP) server exposing DB tools for AI clients.`,
 }
