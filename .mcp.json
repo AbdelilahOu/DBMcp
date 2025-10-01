@@ -1,13 +1,13 @@
 {
   "mcpServers": {
     "database": {
-      "command": "C:\\Users\\abdel\\OneDrive\\Desktop\\Projects\\ai\\DBMcp\\bin\\DBMcp.exe",
+      "command": "./bin/DBMcp.exe",
       "args": [
         "stdio",
         "--connection",
         "OPENMRS",
         "--config",
-        "C:\\Users\\abdel\\OneDrive\\Desktop\\Projects\\ai\\DBMcp\\connections.json"
+        "./connections.json"
       ],
       "env": {
         "DB_CONN_STRING": "OPENMRS"
