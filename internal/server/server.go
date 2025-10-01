@@ -22,7 +22,6 @@ type MCPServerConfig struct {
 }
 
 func NewMCPServer(cfg MCPServerConfig) (*mcp.Server, error) {
-	// Initialize logger first
 	logCfg := logger.ConfigFromLoggingConfig(cfg.Config.Logging)
 	if err := logger.Initialize(logCfg); err != nil {
 		fmt.Printf("Warning: Failed to initialize logger: %v\n", err)
@@ -34,7 +33,7 @@ func NewMCPServer(cfg MCPServerConfig) (*mcp.Server, error) {
 		})
 	}
 
-	impl := &mcp.Implementation{Name: "db-mcp-server", Version: cfg.Version}
+	impl := &mcp.Implementation{Name: "DBMcp", Version: cfg.Version}
 	server := mcp.NewServer(impl, nil)
 
 	logger.Info("MCP Server starting", map[string]interface{}{
