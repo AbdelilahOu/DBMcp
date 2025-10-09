@@ -2,6 +2,7 @@ package state
 
 import (
 	"database/sql"
+	"fmt"
 	"sync"
 
 	"github.com/AbdelilahOu/DBMcp/internal/client"
@@ -64,6 +65,23 @@ func GetSession(sessionID string) *DBSessionState {
 	mu.RLock()
 	defer mu.RUnlock()
 	return sessions[sessionID]
+}
+
+func GetActiveSession(sessionID string) (*DBSessionState, error) {
+	if sessionID == "" {
+		sessionID = "default"
+	}
+
+	sessionState := GetSession(sessionID)
+	if sessionState == nil {
+		sessionState = GetOrCreateSession(sessionID, nil)
+	}
+
+	if sessionState.Conn == nil {
+		return nil, fmt.Errorf("no active DB connection. Use switch_connection tool to connect to a database first")
+	}
+
+	return sessionState, nil
 }
 
 func CloseSession(sessionID string) {

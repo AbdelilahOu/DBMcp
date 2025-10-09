@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AbdelilahOu/DBMcp/internal/logger"
+	"github.com/AbdelilahOu/DBMcp/internal/state"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -31,7 +32,7 @@ func GetSelectQueryTool() *ToolDefinition[SelectQueryInput, SelectQueryOutput] {
 }
 
 func selectQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input SelectQueryInput) (*mcp.CallToolResult, SelectQueryOutput, error) {
-	sessionState, err := getActiveSession("default")
+	sessionState, err := state.GetActiveSession("default")
 	if err != nil {
 		return nil, SelectQueryOutput{}, err
 	}

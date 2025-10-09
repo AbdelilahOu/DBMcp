@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/AbdelilahOu/DBMcp/internal/logger"
+	"github.com/AbdelilahOu/DBMcp/internal/state"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -37,7 +38,7 @@ func GetListTablesTool() *ToolDefinition[ListTablesInput, ListTablesOutput] {
 }
 
 func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input ListTablesInput) (*mcp.CallToolResult, ListTablesOutput, error) {
-	sessionState, err := getActiveSession("default")
+	sessionState, err := state.GetActiveSession("default")
 	if err != nil {
 		return nil, ListTablesOutput{}, err
 	}

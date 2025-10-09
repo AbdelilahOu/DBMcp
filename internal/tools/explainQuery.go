@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/AbdelilahOu/DBMcp/internal/logger"
+	"github.com/AbdelilahOu/DBMcp/internal/state"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -31,7 +32,7 @@ func GetExplainQueryTool() *ToolDefinition[ExplainQueryInput, ExplainQueryOutput
 }
 
 func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input ExplainQueryInput) (*mcp.CallToolResult, ExplainQueryOutput, error) {
-	sessionState, err := getActiveSession("default")
+	sessionState, err := state.GetActiveSession("default")
 	if err != nil {
 		return nil, ExplainQueryOutput{}, err
 	}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/AbdelilahOu/DBMcp/internal/logger"
+	"github.com/AbdelilahOu/DBMcp/internal/state"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -48,7 +49,7 @@ func GetDescribeTableTool() *ToolDefinition[DescribeTableInput, DescribeTableOut
 }
 
 func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input DescribeTableInput) (*mcp.CallToolResult, DescribeTableOutput, error) {
-	sessionState, err := getActiveSession("default")
+	sessionState, err := state.GetActiveSession("default")
 	if err != nil {
 		return nil, DescribeTableOutput{}, err
 	}
