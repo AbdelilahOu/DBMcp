@@ -85,7 +85,6 @@ func showQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input ShowQ
 		return nil, ShowQueryOutput{}, fmt.Errorf("error iterating rows: %v", err)
 	}
 
-	// Log successful database operation
 	logger.LogDatabaseOperation("SHOW", input.Query, int64(len(results)), nil)
 
 	message := fmt.Sprintf("SHOW query completed successfully (%d rows returned)", len(results))

@@ -47,15 +47,33 @@ func analyzeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input An
 		return nil, AnalyzeTableOutput{}, err
 	}
 
+	if sessionState.DBType != "postgres" && sessionState.DBType != "mysql" {
+		return nil, AnalyzeTableOutput{}, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", sessionState.DBType)
+	}
+
 	schema := input.Schema
 	if schema == "" {
-		schema = "public"
+		var currentSchema string
+		var err error
+
+		if sessionState.DBType == "postgres" {
+			err = sessionState.Conn.QueryRow("SELECT current_schema()").Scan(&currentSchema)
+			if err != nil {
+				currentSchema = "public"
+			}
+		} else if sessionState.DBType == "mysql" {
+			err = sessionState.Conn.QueryRow("SELECT DATABASE()").Scan(&currentSchema)
+			if err != nil {
+				return nil, AnalyzeTableOutput{}, fmt.Errorf("failed to get current database: %v", err)
+			}
+		}
+		schema = currentSchema
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	stats, err := getTableStatistics(ctx, sessionState.Conn, input.TableName, schema)
+	stats, err := getTableStatistics(ctx, sessionState.Conn, sessionState.DBType, input.TableName, schema)
 
 	if err != nil {
 		logger.LogDatabaseOperation("ANALYZE_TABLE", fmt.Sprintf("ANALYZE %s.%s", schema, input.TableName), 0, err)
@@ -80,32 +98,84 @@ func analyzeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input An
 	}, output, nil
 }
 
-func getTableStatistics(ctx context.Context, conn *sql.DB, tableName, schema string) (*TableStats, error) {
+func getTableStatistics(ctx context.Context, conn *sql.DB, dbType, tableName, schema string) (*TableStats, error) {
 	stats := &TableStats{
 		TableName:   tableName,
 		ColumnStats: make(map[string]string),
 	}
 
-	pgRowCountQuery := "SELECT COUNT(*) FROM \"" + schema + "\".\"" + tableName + "\""
-	pgSizeQuery := `
-		SELECT
-			pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
-			pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
-			pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename)) as index_size
-		FROM pg_tables
-		WHERE schemaname = $1 AND tablename = $2`
-
-	pgStatsQuery := `
-		SELECT
-			last_analyze,
-			last_autoanalyze
-		FROM pg_stat_user_tables
-		WHERE schemaname = $1 AND relname = $2`
-
 	var err error
 
-	err = conn.QueryRowContext(ctx, pgRowCountQuery).Scan(&stats.RowCount)
-	if err != nil {
+	if dbType == "postgres" {
+
+		pgRowCountQuery := "SELECT COUNT(*) FROM \"" + schema + "\".\"" + tableName + "\""
+		pgSizeQuery := `
+			SELECT
+				pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
+				pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
+				pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename)) as index_size
+			FROM pg_tables
+			WHERE schemaname = $1 AND tablename = $2`
+
+		pgStatsQuery := `
+			SELECT
+				last_analyze,
+				last_autoanalyze
+			FROM pg_stat_user_tables
+			WHERE schemaname = $1 AND relname = $2`
+
+		err = conn.QueryRowContext(ctx, pgRowCountQuery).Scan(&stats.RowCount)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get row count: %v", err)
+		}
+
+		err = conn.QueryRowContext(ctx, pgSizeQuery, schema, tableName).Scan(&stats.TotalSize, &stats.TableSize, &stats.IndexSize)
+		if err != nil {
+			stats.TotalSize = "N/A"
+			stats.TableSize = "N/A"
+			stats.IndexSize = "N/A"
+		}
+
+		var lastAnalyze, lastAutoAnalyze sql.NullTime
+		err = conn.QueryRowContext(ctx, pgStatsQuery, schema, tableName).Scan(&lastAnalyze, &lastAutoAnalyze)
+		if err == nil {
+			if lastAnalyze.Valid {
+				stats.LastAnalyzed = lastAnalyze.Time.Format("2006-01-02 15:04:05")
+			} else if lastAutoAnalyze.Valid {
+				stats.LastAnalyzed = lastAutoAnalyze.Time.Format("2006-01-02 15:04:05") + " (auto)"
+			} else {
+				stats.LastAnalyzed = "Never"
+			}
+		} else {
+			stats.LastAnalyzed = "N/A"
+		}
+
+		columnStatsQuery := `
+			SELECT
+				attname as column_name,
+				CASE
+					WHEN attnotnull THEN 'Not Null'
+					ELSE 'Nullable'
+				END as nullability
+			FROM pg_attribute a
+			JOIN pg_class t ON a.attrelid = t.oid
+			JOIN pg_namespace n ON t.relnamespace = n.oid
+			WHERE n.nspname = $1 AND t.relname = $2 AND a.attnum > 0 AND NOT a.attisdropped
+			LIMIT 5`
+
+		rows, err := conn.QueryContext(ctx, columnStatsQuery, schema, tableName)
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var colName, nullability string
+				if err := rows.Scan(&colName, &nullability); err == nil {
+					stats.ColumnStats[colName] = nullability
+				}
+			}
+		}
+
+	} else if dbType == "mysql" {
+
 		mysqlRowCountQuery := "SELECT COUNT(*) FROM `" + schema + "`.`" + tableName + "`"
 		mysqlSizeQuery := `
 			SELECT
@@ -169,50 +239,7 @@ func getTableStatistics(ctx context.Context, conn *sql.DB, tableName, schema str
 		}
 
 	} else {
-		err = conn.QueryRowContext(ctx, pgSizeQuery, schema, tableName).Scan(&stats.TotalSize, &stats.TableSize, &stats.IndexSize)
-		if err != nil {
-			stats.TotalSize = "N/A"
-			stats.TableSize = "N/A"
-			stats.IndexSize = "N/A"
-		}
-
-		var lastAnalyze, lastAutoAnalyze sql.NullTime
-		err = conn.QueryRowContext(ctx, pgStatsQuery, schema, tableName).Scan(&lastAnalyze, &lastAutoAnalyze)
-		if err == nil {
-			if lastAnalyze.Valid {
-				stats.LastAnalyzed = lastAnalyze.Time.Format("2006-01-02 15:04:05")
-			} else if lastAutoAnalyze.Valid {
-				stats.LastAnalyzed = lastAutoAnalyze.Time.Format("2006-01-02 15:04:05") + " (auto)"
-			} else {
-				stats.LastAnalyzed = "Never"
-			}
-		} else {
-			stats.LastAnalyzed = "N/A"
-		}
-
-		columnStatsQuery := `
-			SELECT
-				attname as column_name,
-				CASE
-					WHEN attnotnull THEN 'Not Null'
-					ELSE 'Nullable'
-				END as nullability
-			FROM pg_attribute a
-			JOIN pg_class t ON a.attrelid = t.oid
-			JOIN pg_namespace n ON t.relnamespace = n.oid
-			WHERE n.nspname = $1 AND t.relname = $2 AND a.attnum > 0 AND NOT a.attisdropped
-			LIMIT 5`
-
-		rows, err := conn.QueryContext(ctx, columnStatsQuery, schema, tableName)
-		if err == nil {
-			defer rows.Close()
-			for rows.Next() {
-				var colName, nullability string
-				if err := rows.Scan(&colName, &nullability); err == nil {
-					stats.ColumnStats[colName] = nullability
-				}
-			}
-		}
+		return nil, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", dbType)
 	}
 
 	return stats, nil

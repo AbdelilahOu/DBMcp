@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -36,6 +37,10 @@ func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input Ex
 		return nil, ExplainQueryOutput{}, err
 	}
 
+	if sessionState.DBType != "postgres" && sessionState.DBType != "mysql" {
+		return nil, ExplainQueryOutput{}, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", sessionState.DBType)
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
@@ -50,23 +55,30 @@ func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input Ex
 
 	var explainQuery string
 	var plan string
+	var rows *sql.Rows
 
-	explainQuery = fmt.Sprintf("EXPLAIN (FORMAT JSON, ANALYZE false) %s", query)
-	rows, err := sessionState.Conn.QueryContext(ctx, explainQuery)
-	if err != nil {
-		explainQuery = fmt.Sprintf("EXPLAIN %s", query)
+	if sessionState.DBType == "postgres" {
+		explainQuery = fmt.Sprintf("EXPLAIN (FORMAT JSON, ANALYZE false) %s", query)
 		rows, err = sessionState.Conn.QueryContext(ctx, explainQuery)
 		if err != nil {
-			explainQuery = fmt.Sprintf("EXPLAIN FORMAT=JSON %s", query)
+
+			explainQuery = fmt.Sprintf("EXPLAIN %s", query)
 			rows, err = sessionState.Conn.QueryContext(ctx, explainQuery)
 			if err != nil {
-				explainQuery = fmt.Sprintf("EXPLAIN %s", query)
-				rows, err = sessionState.Conn.QueryContext(ctx, explainQuery)
-				if err != nil {
+				logger.LogDatabaseOperation("EXPLAIN", input.Query, 0, err)
+				return nil, ExplainQueryOutput{}, fmt.Errorf("failed to explain query: %v", err)
+			}
+		}
+	} else if sessionState.DBType == "mysql" {
+		explainQuery = fmt.Sprintf("EXPLAIN FORMAT=JSON %s", query)
+		rows, err = sessionState.Conn.QueryContext(ctx, explainQuery)
+		if err != nil {
 
-					logger.LogDatabaseOperation("EXPLAIN", input.Query, 0, err)
-					return nil, ExplainQueryOutput{}, fmt.Errorf("failed to explain query: %v", err)
-				}
+			explainQuery = fmt.Sprintf("EXPLAIN %s", query)
+			rows, err = sessionState.Conn.QueryContext(ctx, explainQuery)
+			if err != nil {
+				logger.LogDatabaseOperation("EXPLAIN", input.Query, 0, err)
+				return nil, ExplainQueryOutput{}, fmt.Errorf("failed to explain query: %v", err)
 			}
 		}
 	}

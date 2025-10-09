@@ -27,24 +27,24 @@ func getActiveSession(sessionID string) (*state.DBSessionState, error) {
 }
 
 func RegisterTools(s *mcp.Server, cfg *config.Config) {
-	// List Tables Tool
+
 	GetListTablesTool().Register(s)
-	// Describe Table Tool
+
 	GetDescribeTableTool().Register(s)
-	// Get DB Info Tool
+
 	GetDbInfoTool().Register(s)
-	// Execute Query Tool (only if not read-only)
+
 	GetExecuteQueryTool().Register(s)
-	// Select Query Tool
+
 	GetSelectQueryTool().Register(s)
-	// Show Query Tool
+
 	GetShowQueryTool().Register(s)
-	// Explain Query Tool
+
 	GetExplainQueryTool().Register(s)
-	// Connection Management Tools (always available)
+
 	GetListConnectionsTool(cfg).Register(s)
 	GetSwitchConnectionTool(cfg).Register(s)
 	GetTestConnectionTool(cfg).Register(s)
-	// Analyze Table Tool
+
 	GetAnalyzeTableTool().Register(s)
 }

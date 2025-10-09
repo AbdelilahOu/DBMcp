@@ -77,7 +77,6 @@ func executeQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input Ex
 		operation = "QUERY"
 	}
 
-	// Log successful database operation
 	logger.LogDatabaseOperation(operation, input.Query, rowsAffected, nil)
 
 	message := fmt.Sprintf("%s operation completed successfully", operation)

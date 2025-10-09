@@ -40,14 +40,13 @@ func runStdioServer(cmd *cobra.Command, args []string) error {
 
 	var initialConnection string
 
-	// Load config and set global config for tools to use
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		fmt.Printf("Warning: Failed to load config: %v\n", err)
 		fmt.Println("Server will start without connections. Use list_connections and switch_connection tools.")
 	} else {
 		if connection != "" {
-			// User explicitly specified a connection
+
 			if _, exists := cfg.GetConnection(connection); exists {
 				fmt.Printf("Config loaded. Will initialize connection: %s\n", connection)
 				initialConnection = connection
@@ -55,7 +54,7 @@ func runStdioServer(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("connection '%s' not found in config", connection)
 			}
 		} else if cfg.DefaultConnection != "" {
-			// Try to use default connection if it exists
+
 			if _, exists := cfg.GetConnection(cfg.DefaultConnection); exists {
 				fmt.Printf("Config loaded. Will initialize default connection: %s\n", cfg.DefaultConnection)
 				initialConnection = cfg.DefaultConnection

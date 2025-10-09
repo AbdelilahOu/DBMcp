@@ -54,14 +54,25 @@ func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input D
 		return nil, DescribeTableOutput{}, err
 	}
 
+	if sessionState.DBType != "postgres" && sessionState.DBType != "mysql" {
+		return nil, DescribeTableOutput{}, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", sessionState.DBType)
+	}
+
 	schema := input.Schema
 	if schema == "" {
-		// Get current database/schema
 		var currentSchema string
-		err := sessionState.Conn.QueryRow("SELECT DATABASE()").Scan(&currentSchema)
-		if err != nil {
-			// Fallback to 'public' for PostgreSQL
-			currentSchema = "public"
+		var err error
+
+		if sessionState.DBType == "postgres" {
+			err = sessionState.Conn.QueryRow("SELECT current_schema()").Scan(&currentSchema)
+			if err != nil {
+				currentSchema = "public"
+			}
+		} else if sessionState.DBType == "mysql" {
+			err = sessionState.Conn.QueryRow("SELECT DATABASE()").Scan(&currentSchema)
+			if err != nil {
+				return nil, DescribeTableOutput{}, fmt.Errorf("failed to get current database: %v", err)
+			}
 		}
 		schema = currentSchema
 	}
@@ -69,14 +80,14 @@ func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input D
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	columns, err := getTableColumns(ctx, sessionState.Conn, input.TableName, schema)
+	columns, err := getTableColumns(ctx, sessionState.Conn, sessionState.DBType, input.TableName, schema)
 	if err != nil {
 
 		logger.LogDatabaseOperation("DESCRIBE_TABLE", fmt.Sprintf("DESCRIBE %s.%s", schema, input.TableName), 0, err)
 		return nil, DescribeTableOutput{}, fmt.Errorf("get columns error: %v", err)
 	}
 
-	indexes, err := getTableIndexes(ctx, sessionState.Conn, input.TableName, schema)
+	indexes, err := getTableIndexes(ctx, sessionState.Conn, sessionState.DBType, input.TableName, schema)
 	if err != nil {
 
 		logger.LogDatabaseOperation("DESCRIBE_TABLE", fmt.Sprintf("DESCRIBE %s.%s", schema, input.TableName), 0, err)
@@ -102,30 +113,37 @@ func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input D
 	}, output, nil
 }
 
-func getTableColumns(ctx context.Context, conn *sql.DB, tableName, schema string) ([]ColumnInfo, error) {
-	pgQuery := `
-		SELECT
-			c.column_name,
-			c.data_type,
-			CASE WHEN c.is_nullable = 'YES' THEN true ELSE false END as is_nullable,
-			COALESCE(c.column_default, '') as default_value,
-			c.character_maximum_length,
-			CASE WHEN pk.column_name IS NOT NULL THEN true ELSE false END as is_primary_key
-		FROM information_schema.columns c
-		LEFT JOIN (
-			SELECT ku.column_name
-			FROM information_schema.table_constraints tc
-			JOIN information_schema.key_column_usage ku
-				ON tc.constraint_name = ku.constraint_name
-			WHERE tc.constraint_type = 'PRIMARY KEY'
-				AND tc.table_name = $1
-				AND tc.table_schema = $2
-		) pk ON c.column_name = pk.column_name
-		WHERE c.table_name = $1 AND c.table_schema = $2
-		ORDER BY c.ordinal_position`
+func getTableColumns(ctx context.Context, conn *sql.DB, dbType, tableName, schema string) ([]ColumnInfo, error) {
+	var rows *sql.Rows
+	var err error
 
-	rows, err := conn.QueryContext(ctx, pgQuery, tableName, schema)
-	if err != nil {
+	if dbType == "postgres" {
+		pgQuery := `
+			SELECT
+				c.column_name,
+				c.data_type,
+				CASE WHEN c.is_nullable = 'YES' THEN true ELSE false END as is_nullable,
+				COALESCE(c.column_default, '') as default_value,
+				c.character_maximum_length,
+				CASE WHEN pk.column_name IS NOT NULL THEN true ELSE false END as is_primary_key
+			FROM information_schema.columns c
+			LEFT JOIN (
+				SELECT ku.column_name
+				FROM information_schema.table_constraints tc
+				JOIN information_schema.key_column_usage ku
+					ON tc.constraint_name = ku.constraint_name
+				WHERE tc.constraint_type = 'PRIMARY KEY'
+					AND tc.table_name = $1
+					AND tc.table_schema = $2
+			) pk ON c.column_name = pk.column_name
+			WHERE c.table_name = $1 AND c.table_schema = $2
+			ORDER BY c.ordinal_position`
+
+		rows, err = conn.QueryContext(ctx, pgQuery, tableName, schema)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query columns: %v", err)
+		}
+	} else if dbType == "mysql" {
 		mysqlQuery := `
 			SELECT
 				COLUMN_NAME as column_name,
@@ -142,6 +160,8 @@ func getTableColumns(ctx context.Context, conn *sql.DB, tableName, schema string
 		if err != nil {
 			return nil, fmt.Errorf("failed to query columns: %v", err)
 		}
+	} else {
+		return nil, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", dbType)
 	}
 	defer rows.Close()
 
@@ -173,23 +193,30 @@ func getTableColumns(ctx context.Context, conn *sql.DB, tableName, schema string
 	return columns, rows.Err()
 }
 
-func getTableIndexes(ctx context.Context, conn *sql.DB, tableName, schema string) ([]IndexInfo, error) {
-	pgQuery := `
-		SELECT
-			i.relname as index_name,
-			array_agg(a.attname ORDER BY array_position(ix.indkey, a.attnum)) as columns,
-			ix.indisunique as is_unique
-		FROM pg_class t
-		JOIN pg_index ix ON t.oid = ix.indrelid
-		JOIN pg_class i ON i.oid = ix.indexrelid
-		JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
-		JOIN pg_namespace n ON n.oid = t.relnamespace
-		WHERE t.relname = $1 AND n.nspname = $2
-		GROUP BY i.relname, ix.indisunique
-		ORDER BY i.relname`
+func getTableIndexes(ctx context.Context, conn *sql.DB, dbType, tableName, schema string) ([]IndexInfo, error) {
+	var rows *sql.Rows
+	var err error
 
-	rows, err := conn.QueryContext(ctx, pgQuery, tableName, schema)
-	if err != nil {
+	if dbType == "postgres" {
+		pgQuery := `
+			SELECT
+				i.relname as index_name,
+				array_agg(a.attname ORDER BY array_position(ix.indkey, a.attnum)) as columns,
+				ix.indisunique as is_unique
+			FROM pg_class t
+			JOIN pg_index ix ON t.oid = ix.indrelid
+			JOIN pg_class i ON i.oid = ix.indexrelid
+			JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
+			JOIN pg_namespace n ON n.oid = t.relnamespace
+			WHERE t.relname = $1 AND n.nspname = $2
+			GROUP BY i.relname, ix.indisunique
+			ORDER BY i.relname`
+
+		rows, err = conn.QueryContext(ctx, pgQuery, tableName, schema)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query indexes: %v", err)
+		}
+	} else if dbType == "mysql" {
 		mysqlQuery := `
 			SELECT
 				INDEX_NAME as index_name,
@@ -204,6 +231,8 @@ func getTableIndexes(ctx context.Context, conn *sql.DB, tableName, schema string
 		if err != nil {
 			return nil, fmt.Errorf("failed to query indexes: %v", err)
 		}
+	} else {
+		return nil, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", dbType)
 	}
 	defer rows.Close()
 

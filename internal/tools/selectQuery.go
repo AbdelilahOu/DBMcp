@@ -85,7 +85,6 @@ func selectQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input Sel
 		return nil, SelectQueryOutput{}, fmt.Errorf("error iterating rows: %v", err)
 	}
 
-	// Log successful database operation
 	logger.LogDatabaseOperation("SELECT", input.Query, int64(len(results)), nil)
 
 	message := fmt.Sprintf("SELECT query completed successfully (%d rows returned)", len(results))

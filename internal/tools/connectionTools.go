@@ -123,8 +123,8 @@ func switchConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, inpu
 	}
 
 	sessionState.Conn = dbClient.DB
+	sessionState.DBType = conn.Type
 
-	// Log successful connection switch
 	logger.LogConnectionEvent("switch_connection", input.Connection, conn.Type, nil)
 
 	output := SwitchConnectionOutput{
@@ -224,7 +224,6 @@ func testConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, input 
 		connectionName = "current"
 	}
 
-	// Log successful connection test
 	logger.LogConnectionEvent("test_connection", connectionName, "unknown", nil)
 
 	output := TestConnectionOutput{

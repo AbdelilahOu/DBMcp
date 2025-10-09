@@ -15,11 +15,11 @@
     "OPENELIS": {
       "name": "OPENELIS-PostgreSQL",
       "type": "postgres",
-      "url": "postgresql://clinlims:clinlims@192.168.100.60:2345/clinlims?sslmode=disable",
+      "url": "postgresql://clinlims:clinlims@192.168.100.60:15432/clinlims?sslmode=disable",
       "description": "OPENELIS instance in the vps"
     }
   },
-  "default_connection": "DCM4CHEE",
+  "default_connection": "",
   "settings": {
     "query_timeout": "30s",
     "max_connections": 10,

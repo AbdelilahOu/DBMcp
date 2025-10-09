@@ -40,7 +40,6 @@ func NewMCPServer(cfg MCPServerConfig) (*mcp.Server, error) {
 		"version": cfg.Version,
 	})
 
-	// Initialize connection if specified
 	if cfg.InitialConnection != "" {
 		conn, exists := cfg.Config.GetConnection(cfg.InitialConnection)
 		if !exists {
@@ -82,7 +81,6 @@ func initializeConnection(conn config.Connection, connectionName string) error {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Create or update the default session with this connection
 	sessionID := "default"
 	sessionState := state.GetOrCreateSession(sessionID, dbClient)
 	if sessionState == nil {
@@ -91,7 +89,6 @@ func initializeConnection(conn config.Connection, connectionName string) error {
 		return err
 	}
 
-	// Ensure the connection is properly set in the session
 	sessionState.Conn = dbClient.DB
 
 	logger.LogConnectionEvent("initialize_connection", connectionName, conn.Type, nil)
@@ -102,7 +99,6 @@ func RunStdioServer(cfg StdioServerConfig) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// Ensure logger cleanup on shutdown
 	defer func() {
 		if err := logger.Shutdown(); err != nil {
 			fmt.Printf("Error shutting down logger: %v\n", err)

@@ -42,37 +42,32 @@ func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input List
 		return nil, ListTablesOutput{}, err
 	}
 
+	if sessionState.DBType != "postgres" && sessionState.DBType != "mysql" {
+		return nil, ListTablesOutput{}, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", sessionState.DBType)
+	}
+
 	schema := input.Schema
 	if schema == "" {
-		schema = "public"
+		var currentSchema string
+		var err error
+
+		if sessionState.DBType == "postgres" {
+			err = sessionState.Conn.QueryRow("SELECT current_schema()").Scan(&currentSchema)
+			if err != nil {
+				currentSchema = "public"
+			}
+		} else if sessionState.DBType == "mysql" {
+			err = sessionState.Conn.QueryRow("SELECT DATABASE()").Scan(&currentSchema)
+			if err != nil {
+				return nil, ListTablesOutput{}, fmt.Errorf("failed to get current database: %v", err)
+			}
+		}
+		schema = currentSchema
 	}
 
 	var query string
 
-	detectQuery := "SELECT 1 FROM information_schema.tables WHERE table_schema = 'information_schema' LIMIT 1"
-	_, err = sessionState.Conn.QueryContext(ctx, detectQuery)
-
-	if err != nil {
-		query = `
-			SELECT
-				table_name as name,
-				table_schema as schema_name,
-				table_type as table_type
-			FROM information_schema.tables
-			WHERE table_schema NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')
-			ORDER BY table_name`
-
-		if input.Schema != "" {
-			query = `
-				SELECT
-					table_name as name,
-					table_schema as schema_name,
-					table_type as table_type
-				FROM information_schema.tables
-				WHERE table_schema = ?
-				ORDER BY table_name`
-		}
-	} else {
+	if sessionState.DBType == "postgres" {
 		if input.Schema != "" {
 			query = `
 				SELECT
@@ -92,13 +87,33 @@ func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input List
 				WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
 				ORDER BY table_name`
 		}
+	} else if sessionState.DBType == "mysql" {
+		if input.Schema != "" {
+			query = `
+				SELECT
+					table_name as name,
+					table_schema as schema_name,
+					table_type as table_type
+				FROM information_schema.tables
+				WHERE table_schema = ?
+				ORDER BY table_name`
+		} else {
+			query = `
+				SELECT
+					table_name as name,
+					table_schema as schema_name,
+					table_type as table_type
+				FROM information_schema.tables
+				WHERE table_schema NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')
+				ORDER BY table_name`
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	var rows *sql.Rows
-	if input.Schema != "" && !strings.Contains(query, "NOT IN") {
+	if input.Schema != "" {
 		rows, err = sessionState.Conn.QueryContext(ctx, query, schema)
 	} else {
 		rows, err = sessionState.Conn.QueryContext(ctx, query)
@@ -135,7 +150,6 @@ func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input List
 		return nil, ListTablesOutput{}, fmt.Errorf("rows iteration error: %v", err)
 	}
 
-	// Log successful database operation
 	logger.LogDatabaseOperation("LIST_TABLES", query, int64(len(tables)), nil)
 
 	output := ListTablesOutput{Tables: tables}

@@ -2,13 +2,7 @@
   "mcpServers": {
     "database": {
       "command": "./bin/DBMcp.exe",
-      "args": [
-        "stdio",
-        "--connection",
-        "OPENMRS",
-        "--config",
-        "./connections.json"
-      ],
+      "args": ["stdio", "--config", "./connections.json"],
       "env": {
         "DB_CONN_STRING": "OPENMRS"
       }

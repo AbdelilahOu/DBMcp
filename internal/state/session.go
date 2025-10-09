@@ -11,6 +11,7 @@ import (
 type DBSessionState struct {
 	Conn          *sql.DB
 	CurrentSchema string
+	DBType        string
 }
 
 var (
