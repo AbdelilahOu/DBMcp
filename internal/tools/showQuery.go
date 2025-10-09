@@ -57,7 +57,7 @@ func showQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input ShowQ
 		return nil, ShowQueryOutput{}, fmt.Errorf("error getting columns: %v", err)
 	}
 
-	var results []map[string]interface{}
+	results := make([]map[string]interface{}, 0)
 	for rows.Next() {
 		values := make([]interface{}, len(columns))
 		valuePtrs := make([]interface{}, len(columns))
