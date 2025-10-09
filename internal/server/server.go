@@ -90,6 +90,22 @@ func initializeConnection(conn config.Connection, connectionName string) error {
 	}
 
 	sessionState.Conn = dbClient.DB
+	sessionState.DBType = conn.Type
+
+	var currentSchema string
+	if conn.Type == "postgres" {
+		err = dbClient.DB.QueryRow("SELECT current_schema()").Scan(&currentSchema)
+		if err != nil {
+			currentSchema = "public"
+		}
+	} else if conn.Type == "mysql" {
+		err = dbClient.DB.QueryRow("SELECT DATABASE()").Scan(&currentSchema)
+		if err != nil {
+			logger.LogConnectionEvent("initialize_connection", connectionName, conn.Type, fmt.Errorf("failed to get current database: %v", err))
+			return fmt.Errorf("failed to get current database: %w", err)
+		}
+	}
+	sessionState.CurrentSchema = currentSchema
 
 	logger.LogConnectionEvent("initialize_connection", connectionName, conn.Type, nil)
 	return nil

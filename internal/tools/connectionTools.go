@@ -125,6 +125,21 @@ func switchConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, inpu
 	sessionState.Conn = dbClient.DB
 	sessionState.DBType = conn.Type
 
+	var currentSchema string
+	if conn.Type == "postgres" {
+		err = dbClient.DB.QueryRow("SELECT current_schema()").Scan(&currentSchema)
+		if err != nil {
+			currentSchema = "public"
+		}
+	} else if conn.Type == "mysql" {
+		err = dbClient.DB.QueryRow("SELECT DATABASE()").Scan(&currentSchema)
+		if err != nil {
+			logger.LogConnectionEvent("switch_connection", input.Connection, conn.Type, fmt.Errorf("failed to get current database: %v", err))
+			return nil, SwitchConnectionOutput{}, fmt.Errorf("failed to get current database: %v", err)
+		}
+	}
+	sessionState.CurrentSchema = currentSchema
+
 	logger.LogConnectionEvent("switch_connection", input.Connection, conn.Type, nil)
 
 	output := SwitchConnectionOutput{

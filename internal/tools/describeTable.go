@@ -60,21 +60,7 @@ func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input D
 
 	schema := input.Schema
 	if schema == "" {
-		var currentSchema string
-		var err error
-
-		if sessionState.DBType == "postgres" {
-			err = sessionState.Conn.QueryRow("SELECT current_schema()").Scan(&currentSchema)
-			if err != nil {
-				currentSchema = "public"
-			}
-		} else if sessionState.DBType == "mysql" {
-			err = sessionState.Conn.QueryRow("SELECT DATABASE()").Scan(&currentSchema)
-			if err != nil {
-				return nil, DescribeTableOutput{}, fmt.Errorf("failed to get current database: %v", err)
-			}
-		}
-		schema = currentSchema
+		schema = sessionState.CurrentSchema
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
