@@ -27,7 +27,6 @@ func getActiveSession(sessionID string) (*state.DBSessionState, error) {
 }
 
 func RegisterTools(s *mcp.Server, cfg *config.Config) {
-
 	GetListTablesTool().Register(s)
 
 	GetDescribeTableTool().Register(s)

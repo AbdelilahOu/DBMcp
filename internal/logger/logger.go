@@ -94,7 +94,6 @@ func NewLogger(cfg Config) (*Logger, error) {
 	}
 
 	if cfg.OutputFile != "" {
-
 		dir := filepath.Dir(cfg.OutputFile)
 		if dir != "." && dir != "" {
 			if err := os.MkdirAll(dir, 0755); err != nil {

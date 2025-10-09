@@ -32,7 +32,6 @@ func GetDbInfoTool() *ToolDefinition[GetDBInfoInput, GetDBInfoOutput] {
 }
 
 func getDBInfoHandler(ctx context.Context, req *mcp.CallToolRequest, input GetDBInfoInput) (*mcp.CallToolResult, GetDBInfoOutput, error) {
-
 	sessionState, err := getActiveSession("default")
 	if err != nil {
 		return nil, GetDBInfoOutput{}, err

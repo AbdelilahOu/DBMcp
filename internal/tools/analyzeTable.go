@@ -41,7 +41,6 @@ func GetAnalyzeTableTool() *ToolDefinition[AnalyzeTableInput, AnalyzeTableOutput
 }
 
 func analyzeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeTableInput) (*mcp.CallToolResult, AnalyzeTableOutput, error) {
-
 	sessionState, err := getActiveSession("default")
 	if err != nil {
 		return nil, AnalyzeTableOutput{}, err
@@ -107,7 +106,6 @@ func getTableStatistics(ctx context.Context, conn *sql.DB, dbType, tableName, sc
 	var err error
 
 	if dbType == "postgres" {
-
 		pgRowCountQuery := "SELECT COUNT(*) FROM \"" + schema + "\".\"" + tableName + "\""
 		pgSizeQuery := `
 			SELECT
@@ -175,7 +173,6 @@ func getTableStatistics(ctx context.Context, conn *sql.DB, dbType, tableName, sc
 		}
 
 	} else if dbType == "mysql" {
-
 		mysqlRowCountQuery := "SELECT COUNT(*) FROM `" + schema + "`.`" + tableName + "`"
 		mysqlSizeQuery := `
 			SELECT

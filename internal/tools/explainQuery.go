@@ -31,7 +31,6 @@ func GetExplainQueryTool() *ToolDefinition[ExplainQueryInput, ExplainQueryOutput
 }
 
 func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input ExplainQueryInput) (*mcp.CallToolResult, ExplainQueryOutput, error) {
-
 	sessionState, err := getActiveSession("default")
 	if err != nil {
 		return nil, ExplainQueryOutput{}, err
@@ -61,7 +60,6 @@ func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input Ex
 		explainQuery = fmt.Sprintf("EXPLAIN (FORMAT JSON, ANALYZE false) %s", query)
 		rows, err = sessionState.Conn.QueryContext(ctx, explainQuery)
 		if err != nil {
-
 			explainQuery = fmt.Sprintf("EXPLAIN %s", query)
 			rows, err = sessionState.Conn.QueryContext(ctx, explainQuery)
 			if err != nil {
@@ -73,7 +71,6 @@ func explainQueryHandler(ctx context.Context, req *mcp.CallToolRequest, input Ex
 		explainQuery = fmt.Sprintf("EXPLAIN FORMAT=JSON %s", query)
 		rows, err = sessionState.Conn.QueryContext(ctx, explainQuery)
 		if err != nil {
-
 			explainQuery = fmt.Sprintf("EXPLAIN %s", query)
 			rows, err = sessionState.Conn.QueryContext(ctx, explainQuery)
 			if err != nil {

@@ -48,7 +48,6 @@ func GetDescribeTableTool() *ToolDefinition[DescribeTableInput, DescribeTableOut
 }
 
 func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input DescribeTableInput) (*mcp.CallToolResult, DescribeTableOutput, error) {
-
 	sessionState, err := getActiveSession("default")
 	if err != nil {
 		return nil, DescribeTableOutput{}, err
@@ -82,14 +81,12 @@ func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input D
 
 	columns, err := getTableColumns(ctx, sessionState.Conn, sessionState.DBType, input.TableName, schema)
 	if err != nil {
-
 		logger.LogDatabaseOperation("DESCRIBE_TABLE", fmt.Sprintf("DESCRIBE %s.%s", schema, input.TableName), 0, err)
 		return nil, DescribeTableOutput{}, fmt.Errorf("get columns error: %v", err)
 	}
 
 	indexes, err := getTableIndexes(ctx, sessionState.Conn, sessionState.DBType, input.TableName, schema)
 	if err != nil {
-
 		logger.LogDatabaseOperation("DESCRIBE_TABLE", fmt.Sprintf("DESCRIBE %s.%s", schema, input.TableName), 0, err)
 		return nil, DescribeTableOutput{}, fmt.Errorf("get indexes error: %v", err)
 	}
