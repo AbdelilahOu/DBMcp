@@ -162,7 +162,7 @@ func switchConnectionHandler(ctx context.Context, req *mcp.CallToolRequest, inpu
 func GetTestConnectionTool(cfg *config.Config) *ToolDefinition[TestConnectionInput, TestConnectionOutput] {
 	return NewToolDefinition[TestConnectionInput, TestConnectionOutput](
 		"test_connection",
-		"Test connectivity to a database before executing queries.",
+		"Test database connectivity. If a connection name is provided, tests that specific connection. If not provided, tests the current active connection in the session state.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input TestConnectionInput) (*mcp.CallToolResult, TestConnectionOutput, error) {
 			return testConnectionHandler(ctx, req, input, cfg)
 		},
