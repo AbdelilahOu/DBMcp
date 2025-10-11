@@ -43,58 +43,54 @@ func GetDescribeTableTool() *ToolDefinition[DescribeTableInput, DescribeTableOut
 		"describe_table",
 		"Get detailed schema information about a table's structure including column definitions (names, data types, nullability, primary keys, default values) and indexes. Use this when you need to understand the table's schema design, not for getting data or statistics. For row counts and sizes use analyze_table instead.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input DescribeTableInput) (*mcp.CallToolResult, DescribeTableOutput, error) {
-			return describeTableHandler(ctx, req, input)
+			sessionState, err := state.GetActiveSession("default")
+			if err != nil {
+				return nil, DescribeTableOutput{}, err
+			}
+
+			if sessionState.DBType != "postgres" && sessionState.DBType != "mysql" {
+				return nil, DescribeTableOutput{}, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", sessionState.DBType)
+			}
+
+			schema := input.Schema
+			if schema == "" {
+				schema = sessionState.CurrentSchema
+			}
+
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+
+			columns, err := getTableColumns(ctx, sessionState.Conn, sessionState.DBType, input.TableName, schema)
+			if err != nil {
+				logger.LogDatabaseOperation("DESCRIBE_TABLE", fmt.Sprintf("DESCRIBE %s.%s", schema, input.TableName), 0, err)
+				return nil, DescribeTableOutput{}, fmt.Errorf("get columns error: %v", err)
+			}
+
+			indexes, err := getTableIndexes(ctx, sessionState.Conn, sessionState.DBType, input.TableName, schema)
+			if err != nil {
+				logger.LogDatabaseOperation("DESCRIBE_TABLE", fmt.Sprintf("DESCRIBE %s.%s", schema, input.TableName), 0, err)
+				return nil, DescribeTableOutput{}, fmt.Errorf("get indexes error: %v", err)
+			}
+
+			logger.LogDatabaseOperation("DESCRIBE_TABLE", fmt.Sprintf("DESCRIBE %s.%s", schema, input.TableName), int64(len(columns)), nil)
+
+			output := DescribeTableOutput{
+				Columns: columns,
+				Indexes: indexes,
+			}
+
+			jsonBytes, err := json.Marshal(output)
+			if err != nil {
+				return nil, DescribeTableOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+			}
+
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: string(jsonBytes)},
+				},
+			}, output, nil
 		},
 	)
-}
-
-func describeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input DescribeTableInput) (*mcp.CallToolResult, DescribeTableOutput, error) {
-	sessionState, err := state.GetActiveSession("default")
-	if err != nil {
-		return nil, DescribeTableOutput{}, err
-	}
-
-	if sessionState.DBType != "postgres" && sessionState.DBType != "mysql" {
-		return nil, DescribeTableOutput{}, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", sessionState.DBType)
-	}
-
-	schema := input.Schema
-	if schema == "" {
-		schema = sessionState.CurrentSchema
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	columns, err := getTableColumns(ctx, sessionState.Conn, sessionState.DBType, input.TableName, schema)
-	if err != nil {
-		logger.LogDatabaseOperation("DESCRIBE_TABLE", fmt.Sprintf("DESCRIBE %s.%s", schema, input.TableName), 0, err)
-		return nil, DescribeTableOutput{}, fmt.Errorf("get columns error: %v", err)
-	}
-
-	indexes, err := getTableIndexes(ctx, sessionState.Conn, sessionState.DBType, input.TableName, schema)
-	if err != nil {
-		logger.LogDatabaseOperation("DESCRIBE_TABLE", fmt.Sprintf("DESCRIBE %s.%s", schema, input.TableName), 0, err)
-		return nil, DescribeTableOutput{}, fmt.Errorf("get indexes error: %v", err)
-	}
-
-	logger.LogDatabaseOperation("DESCRIBE_TABLE", fmt.Sprintf("DESCRIBE %s.%s", schema, input.TableName), int64(len(columns)), nil)
-
-	output := DescribeTableOutput{
-		Columns: columns,
-		Indexes: indexes,
-	}
-
-	jsonBytes, err := json.Marshal(output)
-	if err != nil {
-		return nil, DescribeTableOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			&mcp.TextContent{Text: string(jsonBytes)},
-		},
-	}, output, nil
 }
 
 func getTableColumns(ctx context.Context, conn *sql.DB, dbType, tableName, schema string) ([]ColumnInfo, error) {

@@ -82,7 +82,7 @@ func initializeConnection(conn config.Connection, connectionName string) error {
 	}
 
 	sessionID := "default"
-	sessionState := state.GetOrCreateSession(sessionID, dbClient)
+	sessionState := state.CreateSession(sessionID, dbClient)
 	if sessionState == nil {
 		err := fmt.Errorf("failed to create session")
 		logger.LogConnectionEvent("initialize_connection", connectionName, conn.Type, err)

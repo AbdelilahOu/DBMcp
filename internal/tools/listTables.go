@@ -32,123 +32,119 @@ func GetListTablesTool() *ToolDefinition[ListTablesInput, ListTablesOutput] {
 		"list_tables",
 		"Get a list of all tables and views in the database or a specific schema. Returns table names, schemas, and types (table/view). Use this when you need to discover what tables exist or find a specific table name. For detailed information about a specific table use describe_table or analyze_table.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListTablesInput) (*mcp.CallToolResult, ListTablesOutput, error) {
-			return listTablesHandler(ctx, req, input)
+			sessionState, err := state.GetActiveSession("default")
+			if err != nil {
+				return nil, ListTablesOutput{}, err
+			}
+
+			if sessionState.DBType != "postgres" && sessionState.DBType != "mysql" {
+				return nil, ListTablesOutput{}, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", sessionState.DBType)
+			}
+
+			schema := input.Schema
+			if schema == "" {
+				schema = sessionState.CurrentSchema
+			}
+
+			var query string
+
+			if sessionState.DBType == "postgres" {
+				if input.Schema != "" {
+					query = `
+						SELECT
+							table_name as name,
+							table_schema as schema_name,
+							table_type as table_type
+						FROM information_schema.tables
+						WHERE table_schema = $1
+						ORDER BY table_name`
+				} else {
+					query = `
+						SELECT
+							table_name as name,
+							table_schema as schema_name,
+							table_type as table_type
+						FROM information_schema.tables
+						WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
+						ORDER BY table_name`
+				}
+			} else if sessionState.DBType == "mysql" {
+				if input.Schema != "" {
+					query = `
+						SELECT
+							table_name as name,
+							table_schema as schema_name,
+							table_type as table_type
+						FROM information_schema.tables
+						WHERE table_schema = ?
+						ORDER BY table_name`
+				} else {
+					query = `
+						SELECT
+							table_name as name,
+							table_schema as schema_name,
+							table_type as table_type
+						FROM information_schema.tables
+						WHERE table_schema NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')
+						ORDER BY table_name`
+				}
+			}
+
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+
+			var rows *sql.Rows
+			if input.Schema != "" {
+				rows, err = sessionState.Conn.QueryContext(ctx, query, schema)
+			} else {
+				rows, err = sessionState.Conn.QueryContext(ctx, query)
+			}
+
+			if err != nil {
+				logger.LogDatabaseOperation("LIST_TABLES", query, 0, err)
+				return nil, ListTablesOutput{}, fmt.Errorf("query error: %v", err)
+			}
+			defer rows.Close()
+
+			var tables []TableInfo
+			for rows.Next() {
+				var name, schemaName, tableType string
+				if err := rows.Scan(&name, &schemaName, &tableType); err != nil {
+					return nil, ListTablesOutput{}, fmt.Errorf("scan error: %v", err)
+				}
+
+				normalizedType := strings.ToLower(tableType)
+				if strings.Contains(normalizedType, "base table") {
+					normalizedType = "table"
+				} else if strings.Contains(normalizedType, "view") {
+					normalizedType = "view"
+				}
+
+				tables = append(tables, TableInfo{
+					Name:   name,
+					Schema: schemaName,
+					Type:   normalizedType,
+				})
+			}
+
+			if err = rows.Err(); err != nil {
+				return nil, ListTablesOutput{}, fmt.Errorf("rows iteration error: %v", err)
+			}
+
+			logger.LogDatabaseOperation("LIST_TABLES", query, int64(len(tables)), nil)
+
+			output := ListTablesOutput{Tables: tables}
+
+			jsonBytes, err := json.Marshal(output)
+			if err != nil {
+				return nil, ListTablesOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+			}
+
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: string(jsonBytes)},
+				},
+			}, output, nil
 		},
 	)
-}
-
-func listTablesHandler(ctx context.Context, req *mcp.CallToolRequest, input ListTablesInput) (*mcp.CallToolResult, ListTablesOutput, error) {
-	sessionState, err := state.GetActiveSession("default")
-	if err != nil {
-		return nil, ListTablesOutput{}, err
-	}
-
-	if sessionState.DBType != "postgres" && sessionState.DBType != "mysql" {
-		return nil, ListTablesOutput{}, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", sessionState.DBType)
-	}
-
-	schema := input.Schema
-	if schema == "" {
-		schema = sessionState.CurrentSchema
-	}
-
-	var query string
-
-	if sessionState.DBType == "postgres" {
-		if input.Schema != "" {
-			query = `
-				SELECT
-					table_name as name,
-					table_schema as schema_name,
-					table_type as table_type
-				FROM information_schema.tables
-				WHERE table_schema = $1
-				ORDER BY table_name`
-		} else {
-			query = `
-				SELECT
-					table_name as name,
-					table_schema as schema_name,
-					table_type as table_type
-				FROM information_schema.tables
-				WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
-				ORDER BY table_name`
-		}
-	} else if sessionState.DBType == "mysql" {
-		if input.Schema != "" {
-			query = `
-				SELECT
-					table_name as name,
-					table_schema as schema_name,
-					table_type as table_type
-				FROM information_schema.tables
-				WHERE table_schema = ?
-				ORDER BY table_name`
-		} else {
-			query = `
-				SELECT
-					table_name as name,
-					table_schema as schema_name,
-					table_type as table_type
-				FROM information_schema.tables
-				WHERE table_schema NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')
-				ORDER BY table_name`
-		}
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	var rows *sql.Rows
-	if input.Schema != "" {
-		rows, err = sessionState.Conn.QueryContext(ctx, query, schema)
-	} else {
-		rows, err = sessionState.Conn.QueryContext(ctx, query)
-	}
-
-	if err != nil {
-		logger.LogDatabaseOperation("LIST_TABLES", query, 0, err)
-		return nil, ListTablesOutput{}, fmt.Errorf("query error: %v", err)
-	}
-	defer rows.Close()
-
-	var tables []TableInfo
-	for rows.Next() {
-		var name, schemaName, tableType string
-		if err := rows.Scan(&name, &schemaName, &tableType); err != nil {
-			return nil, ListTablesOutput{}, fmt.Errorf("scan error: %v", err)
-		}
-
-		normalizedType := strings.ToLower(tableType)
-		if strings.Contains(normalizedType, "base table") {
-			normalizedType = "table"
-		} else if strings.Contains(normalizedType, "view") {
-			normalizedType = "view"
-		}
-
-		tables = append(tables, TableInfo{
-			Name:   name,
-			Schema: schemaName,
-			Type:   normalizedType,
-		})
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, ListTablesOutput{}, fmt.Errorf("rows iteration error: %v", err)
-	}
-
-	logger.LogDatabaseOperation("LIST_TABLES", query, int64(len(tables)), nil)
-
-	output := ListTablesOutput{Tables: tables}
-
-	jsonBytes, err := json.Marshal(output)
-	if err != nil {
-		return nil, ListTablesOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			&mcp.TextContent{Text: string(jsonBytes)},
-		},
-	}, output, nil
 }

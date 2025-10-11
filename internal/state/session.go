@@ -20,14 +20,13 @@ var (
 	mu       sync.RWMutex
 )
 
-func GetOrCreateSession(sessionID string, globalClient *client.DBClient) *DBSessionState {
+func GetSession(sessionID string) *DBSessionState {
 	mu.RLock()
-	if s, ok := sessions[sessionID]; ok {
-		mu.RUnlock()
-		return s
-	}
-	mu.RUnlock()
+	defer mu.RUnlock()
+	return sessions[sessionID]
+}
 
+func CreateSession(sessionID string, globalClient *client.DBClient) *DBSessionState {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -61,12 +60,6 @@ func GetOrCreateSession(sessionID string, globalClient *client.DBClient) *DBSess
 	return s
 }
 
-func GetSession(sessionID string) *DBSessionState {
-	mu.RLock()
-	defer mu.RUnlock()
-	return sessions[sessionID]
-}
-
 func GetActiveSession(sessionID string) (*DBSessionState, error) {
 	if sessionID == "" {
 		sessionID = "default"
@@ -74,7 +67,7 @@ func GetActiveSession(sessionID string) (*DBSessionState, error) {
 
 	sessionState := GetSession(sessionID)
 	if sessionState == nil {
-		sessionState = GetOrCreateSession(sessionID, nil)
+		return nil, fmt.Errorf("no active DB connection. Use switch_connection tool to connect to a database first")
 	}
 
 	if sessionState.Conn == nil {

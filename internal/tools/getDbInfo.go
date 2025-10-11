@@ -27,100 +27,104 @@ func GetDbInfoTool() *ToolDefinition[GetDBInfoInput, GetDBInfoOutput] {
 		"get_db_info",
 		"Get high-level database overview including database name, version, available schemas, and total table count. Use this as the starting point when exploring an unfamiliar database or when asked general questions about the database. For specific table information use list_tables, describe_table, or analyze_table instead.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetDBInfoInput) (*mcp.CallToolResult, GetDBInfoOutput, error) {
-			return getDBInfoHandler(ctx, req, input)
+			sessionState, err := state.GetActiveSession("default")
+			if err != nil {
+				return nil, GetDBInfoOutput{}, err
+			}
+
+			if sessionState.DBType != "postgres" && sessionState.DBType != "mysql" {
+				return nil, GetDBInfoOutput{}, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", sessionState.DBType)
+			}
+
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+
+			var dbName, version string
+			var schemas []string
+			var tableCount int
+
+			if sessionState.DBType == "postgres" {
+				pgDbNameQuery := "SELECT current_database()"
+				pgVersionQuery := "SELECT version()"
+				pgSchemasQuery := "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast')"
+				pgTableCountQuery := "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')"
+
+				err = sessionState.Conn.QueryRowContext(ctx, pgDbNameQuery).Scan(&dbName)
+				if err != nil {
+					return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get database name: %v", err)
+				}
+
+				err = sessionState.Conn.QueryRowContext(ctx, pgVersionQuery).Scan(&version)
+				if err != nil {
+					return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get version: %v", err)
+				}
+
+				if strings.Contains(version, "PostgreSQL") {
+					parts := strings.Fields(version)
+					if len(parts) >= 2 {
+						version = "PostgreSQL " + parts[1]
+					}
+				}
+
+				schemas, err = getStringSliceFromQuery(ctx, sessionState.Conn, pgSchemasQuery)
+				if err != nil {
+					return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get schemas: %v", err)
+				}
+
+				err = sessionState.Conn.QueryRowContext(ctx, pgTableCountQuery).Scan(&tableCount)
+				if err != nil {
+					return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get table count: %v", err)
+				}
+			} else if sessionState.DBType == "mysql" {
+				mysqlDbNameQuery := "SELECT DATABASE()"
+				mysqlVersionQuery := "SELECT VERSION()"
+				mysqlSchemasQuery := "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')"
+				mysqlTableCountQuery := "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')"
+
+				err = sessionState.Conn.QueryRowContext(ctx, mysqlDbNameQuery).Scan(&dbName)
+				if err != nil {
+					return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get database name: %v", err)
+				}
+
+				err = sessionState.Conn.QueryRowContext(ctx, mysqlVersionQuery).Scan(&version)
+				if err != nil {
+					return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get version: %v", err)
+				}
+
+				schemas, err = getStringSliceFromQuery(ctx, sessionState.Conn, mysqlSchemasQuery)
+				if err != nil {
+					return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get schemas: %v", err)
+				}
+
+				err = sessionState.Conn.QueryRowContext(ctx, mysqlTableCountQuery).Scan(&tableCount)
+				if err != nil {
+					return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get table count: %v", err)
+				}
+
+				version = "MySQL " + version
+			}
+
+			output := GetDBInfoOutput{
+				DatabaseName: dbName,
+				Version:      version,
+				Schemas:      schemas,
+				TableCount:   tableCount,
+			}
+
+			logger.LogDatabaseOperation("GET_DB_INFO", "Database information query", int64(tableCount), nil)
+
+			jsonBytes, err := json.Marshal(output)
+			if err != nil {
+				return nil, GetDBInfoOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+			}
+
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: string(jsonBytes)},
+				},
+			}, output, nil
 		},
 	)
-}
-
-func getDBInfoHandler(ctx context.Context, req *mcp.CallToolRequest, input GetDBInfoInput) (*mcp.CallToolResult, GetDBInfoOutput, error) {
-	sessionState, err := state.GetActiveSession("default")
-	if err != nil {
-		return nil, GetDBInfoOutput{}, err
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	var dbName, version string
-	var schemas []string
-	var tableCount int
-
-	pgDbNameQuery := "SELECT current_database()"
-	pgVersionQuery := "SELECT version()"
-	pgSchemasQuery := "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast')"
-	pgTableCountQuery := "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')"
-
-	err = sessionState.Conn.QueryRowContext(ctx, pgDbNameQuery).Scan(&dbName)
-	if err != nil {
-		mysqlDbNameQuery := "SELECT DATABASE()"
-		mysqlVersionQuery := "SELECT VERSION()"
-		mysqlSchemasQuery := "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')"
-		mysqlTableCountQuery := "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')"
-
-		err = sessionState.Conn.QueryRowContext(ctx, mysqlDbNameQuery).Scan(&dbName)
-		if err != nil {
-			return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get database name: %v", err)
-		}
-
-		err = sessionState.Conn.QueryRowContext(ctx, mysqlVersionQuery).Scan(&version)
-		if err != nil {
-			return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get version: %v", err)
-		}
-
-		schemas, err = getStringSliceFromQuery(ctx, sessionState.Conn, mysqlSchemasQuery)
-		if err != nil {
-			return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get schemas: %v", err)
-		}
-
-		err = sessionState.Conn.QueryRowContext(ctx, mysqlTableCountQuery).Scan(&tableCount)
-		if err != nil {
-			return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get table count: %v", err)
-		}
-
-		version = "MySQL " + version
-	} else {
-		err = sessionState.Conn.QueryRowContext(ctx, pgVersionQuery).Scan(&version)
-		if err != nil {
-			return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get version: %v", err)
-		}
-
-		if strings.Contains(version, "PostgreSQL") {
-			parts := strings.Fields(version)
-			if len(parts) >= 2 {
-				version = "PostgreSQL " + parts[1]
-			}
-		}
-
-		schemas, err = getStringSliceFromQuery(ctx, sessionState.Conn, pgSchemasQuery)
-		if err != nil {
-			return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get schemas: %v", err)
-		}
-
-		err = sessionState.Conn.QueryRowContext(ctx, pgTableCountQuery).Scan(&tableCount)
-		if err != nil {
-			return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get table count: %v", err)
-		}
-	}
-
-	output := GetDBInfoOutput{
-		DatabaseName: dbName,
-		Version:      version,
-		Schemas:      schemas,
-		TableCount:   tableCount,
-	}
-
-	logger.LogDatabaseOperation("GET_DB_INFO", "Database information query", int64(tableCount), nil)
-
-	jsonBytes, err := json.Marshal(output)
-	if err != nil {
-		return nil, GetDBInfoOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			&mcp.TextContent{Text: string(jsonBytes)},
-		},
-	}, output, nil
 }
 
 func getStringSliceFromQuery(ctx context.Context, conn *sql.DB, query string) ([]string, error) {

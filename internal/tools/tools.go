@@ -7,23 +7,16 @@ import (
 )
 
 func RegisterTools(s *mcp.Server, cfg *config.Config) {
-	GetListTablesTool().Register(s)
-
-	GetDescribeTableTool().Register(s)
-
-	GetDbInfoTool().Register(s)
-
-	GetExecuteQueryTool().Register(s)
-
-	GetSelectQueryTool().Register(s)
-
-	GetShowQueryTool().Register(s)
-
-	GetExplainQueryTool().Register(s)
-
 	GetListConnectionsTool(cfg).Register(s)
 	GetSwitchConnectionTool(cfg).Register(s)
 	GetTestConnectionTool(cfg).Register(s)
 
+	GetDbInfoTool().Register(s)
+	GetListTablesTool().Register(s)
+	GetDescribeTableTool().Register(s)
 	GetAnalyzeTableTool().Register(s)
+	GetExecuteQueryTool().Register(s)
+	GetSelectQueryTool().Register(s)
+	GetShowQueryTool().Register(s)
+	GetExplainQueryTool().Register(s)
 }

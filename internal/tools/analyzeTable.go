@@ -36,52 +36,48 @@ func GetAnalyzeTableTool() *ToolDefinition[AnalyzeTableInput, AnalyzeTableOutput
 		"analyze_table",
 		"PREFERRED tool for getting table metadata and statistics including row count, table size, index size, and column information. Use this instead of SELECT COUNT(*) queries for counting rows or getting table overview information. This tool is optimized for metadata retrieval and doesn't execute full table scans.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeTableInput) (*mcp.CallToolResult, AnalyzeTableOutput, error) {
-			return analyzeTableHandler(ctx, req, input)
+			sessionState, err := state.GetActiveSession("default")
+			if err != nil {
+				return nil, AnalyzeTableOutput{}, err
+			}
+
+			if sessionState.DBType != "postgres" && sessionState.DBType != "mysql" {
+				return nil, AnalyzeTableOutput{}, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", sessionState.DBType)
+			}
+
+			schema := input.Schema
+			if schema == "" {
+				schema = sessionState.CurrentSchema
+			}
+
+			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			defer cancel()
+
+			stats, err := getTableStatistics(ctx, sessionState.Conn, sessionState.DBType, input.TableName, schema)
+
+			if err != nil {
+				logger.LogDatabaseOperation("ANALYZE_TABLE", fmt.Sprintf("ANALYZE %s.%s", schema, input.TableName), 0, err)
+				return nil, AnalyzeTableOutput{}, fmt.Errorf("failed to analyze table: %v", err)
+			}
+
+			logger.LogDatabaseOperation("ANALYZE_TABLE", fmt.Sprintf("ANALYZE %s.%s", schema, input.TableName), stats.RowCount, nil)
+
+			output := AnalyzeTableOutput{
+				Stats: *stats,
+			}
+
+			jsonBytes, err := json.Marshal(output)
+			if err != nil {
+				return nil, AnalyzeTableOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+			}
+
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: string(jsonBytes)},
+				},
+			}, output, nil
 		},
 	)
-}
-
-func analyzeTableHandler(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeTableInput) (*mcp.CallToolResult, AnalyzeTableOutput, error) {
-	sessionState, err := state.GetActiveSession("default")
-	if err != nil {
-		return nil, AnalyzeTableOutput{}, err
-	}
-
-	if sessionState.DBType != "postgres" && sessionState.DBType != "mysql" {
-		return nil, AnalyzeTableOutput{}, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", sessionState.DBType)
-	}
-
-	schema := input.Schema
-	if schema == "" {
-		schema = sessionState.CurrentSchema
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-
-	stats, err := getTableStatistics(ctx, sessionState.Conn, sessionState.DBType, input.TableName, schema)
-
-	if err != nil {
-		logger.LogDatabaseOperation("ANALYZE_TABLE", fmt.Sprintf("ANALYZE %s.%s", schema, input.TableName), 0, err)
-		return nil, AnalyzeTableOutput{}, fmt.Errorf("failed to analyze table: %v", err)
-	}
-
-	logger.LogDatabaseOperation("ANALYZE_TABLE", fmt.Sprintf("ANALYZE %s.%s", schema, input.TableName), stats.RowCount, nil)
-
-	output := AnalyzeTableOutput{
-		Stats: *stats,
-	}
-
-	jsonBytes, err := json.Marshal(output)
-	if err != nil {
-		return nil, AnalyzeTableOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			&mcp.TextContent{Text: string(jsonBytes)},
-		},
-	}, output, nil
 }
 
 func getTableStatistics(ctx context.Context, conn *sql.DB, dbType, tableName, schema string) (*TableStats, error) {
