@@ -19,4 +19,5 @@ func RegisterTools(s *mcp.Server, cfg *config.Config) {
 	GetSelectQueryTool().Register(s)
 	GetShowQueryTool().Register(s)
 	GetExplainQueryTool().Register(s)
+	GetGenerateIdTool().Register(s)
 }
