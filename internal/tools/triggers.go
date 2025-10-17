@@ -1,0 +1,323 @@
+package tools
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/AbdelilahOu/DBMcp/internal/logger"
+	"github.com/AbdelilahOu/DBMcp/internal/state"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+)
+
+type ListTriggersInput struct {
+	TableName string `json:"table_name,omitempty" jsonschema_description:"Optional table name to filter triggers"`
+	Schema    string `json:"schema,omitempty" jsonschema_description:"Optional schema name"`
+}
+
+type TriggerInfo struct {
+	Name       string `json:"name" jsonschema_description:"Trigger name"`
+	Schema     string `json:"schema" jsonschema_description:"Schema name"`
+	TableName  string `json:"table_name" jsonschema_description:"Table the trigger is attached to"`
+	Event      string `json:"event" jsonschema_description:"Trigger event (INSERT, UPDATE, DELETE)"`
+	Timing     string `json:"timing" jsonschema_description:"When trigger fires (BEFORE, AFTER, INSTEAD OF)"`
+	ForEachRow bool   `json:"for_each_row" jsonschema_description:"Whether trigger fires for each row or once per statement"`
+}
+
+type ListTriggersOutput struct {
+	Triggers []TriggerInfo `json:"triggers" jsonschema_description:"Array of trigger information"`
+}
+
+type GetTriggerDefinitionInput struct {
+	TriggerName string `json:"trigger_name" jsonschema:"required" jsonschema_description:"Name of the trigger"`
+	Schema      string `json:"schema,omitempty" jsonschema_description:"Optional schema name"`
+}
+
+type GetTriggerDefinitionOutput struct {
+	TriggerName string `json:"trigger_name" jsonschema_description:"Name of the trigger"`
+	Schema      string `json:"schema" jsonschema_description:"Schema of the trigger"`
+	TableName   string `json:"table_name" jsonschema_description:"Table the trigger is attached to"`
+	Event       string `json:"event" jsonschema_description:"Trigger event"`
+	Timing      string `json:"timing" jsonschema_description:"When trigger fires"`
+	Definition  string `json:"definition" jsonschema_description:"SQL definition or body of the trigger"`
+}
+
+func GetListTriggersTool() *ToolDefinition[ListTriggersInput, ListTriggersOutput] {
+	return NewToolDefinition[ListTriggersInput, ListTriggersOutput](
+		"list_triggers",
+		"List all triggers in the database or for a specific table. Triggers are automated actions that fire in response to INSERT, UPDATE, or DELETE events. Returns trigger names, associated tables, events, and timing (BEFORE/AFTER). Use this to discover database automation. For trigger SQL definition use get_trigger_definition.",
+		func(ctx context.Context, req *mcp.CallToolRequest, input ListTriggersInput) (*mcp.CallToolResult, ListTriggersOutput, error) {
+			sessionState, err := state.GetActiveSession("default")
+			if err != nil {
+				return nil, ListTriggersOutput{}, err
+			}
+
+			if sessionState.DBType != "postgres" && sessionState.DBType != "mysql" {
+				return nil, ListTriggersOutput{}, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", sessionState.DBType)
+			}
+
+			schema := input.Schema
+			if schema == "" {
+				schema = sessionState.CurrentSchema
+			}
+
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+
+			var triggers []TriggerInfo
+			var err2 error
+
+			if sessionState.DBType == "postgres" {
+				triggers, err2 = getPostgresTriggers(ctx, sessionState.Conn, input.TableName, schema)
+			} else {
+				triggers, err2 = getMySQLTriggers(ctx, sessionState.Conn, input.TableName, schema)
+			}
+
+			if err2 != nil {
+				logger.LogDatabaseOperation("LIST_TRIGGERS", "list triggers", 0, err2)
+				return nil, ListTriggersOutput{}, err2
+			}
+
+			logger.LogDatabaseOperation("LIST_TRIGGERS", "list triggers", int64(len(triggers)), nil)
+
+			output := ListTriggersOutput{Triggers: triggers}
+
+			jsonBytes, err := json.Marshal(output)
+			if err != nil {
+				return nil, ListTriggersOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+			}
+
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: string(jsonBytes)},
+				},
+			}, output, nil
+		},
+	)
+}
+
+func GetTriggerDefinitionTool() *ToolDefinition[GetTriggerDefinitionInput, GetTriggerDefinitionOutput] {
+	return NewToolDefinition[GetTriggerDefinitionInput, GetTriggerDefinitionOutput](
+		"get_trigger_definition",
+		"Get the SQL definition of a specific trigger. Returns the complete trigger definition including the trigger function/body, event type, timing, and associated table. Use this to understand what a trigger does and how it's implemented.",
+		func(ctx context.Context, req *mcp.CallToolRequest, input GetTriggerDefinitionInput) (*mcp.CallToolResult, GetTriggerDefinitionOutput, error) {
+			sessionState, err := state.GetActiveSession("default")
+			if err != nil {
+				return nil, GetTriggerDefinitionOutput{}, err
+			}
+
+			if sessionState.DBType != "postgres" && sessionState.DBType != "mysql" {
+				return nil, GetTriggerDefinitionOutput{}, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", sessionState.DBType)
+			}
+
+			schema := input.Schema
+			if schema == "" {
+				schema = sessionState.CurrentSchema
+			}
+
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+
+			var output GetTriggerDefinitionOutput
+			var err2 error
+
+			if sessionState.DBType == "postgres" {
+				output, err2 = getPostgresTriggerDefinition(ctx, sessionState.Conn, input.TriggerName, schema)
+			} else {
+				output, err2 = getMySQLTriggerDefinition(ctx, sessionState.Conn, input.TriggerName, schema)
+			}
+
+			if err2 != nil {
+				logger.LogDatabaseOperation("GET_TRIGGER_DEFINITION", "get trigger definition", 0, err2)
+				return nil, GetTriggerDefinitionOutput{}, err2
+			}
+
+			logger.LogDatabaseOperation("GET_TRIGGER_DEFINITION", "get trigger definition", 1, nil)
+
+			jsonBytes, err := json.Marshal(output)
+			if err != nil {
+				return nil, GetTriggerDefinitionOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+			}
+
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: string(jsonBytes)},
+				},
+			}, output, nil
+		},
+	)
+}
+
+func getPostgresTriggers(ctx context.Context, conn *sql.DB, tableName, schema string) ([]TriggerInfo, error) {
+	query := `
+		SELECT
+			t.trigger_name,
+			t.trigger_schema,
+			t.event_object_table,
+			t.event_manipulation,
+			t.action_timing,
+			CASE WHEN t.action_orientation = 'ROW' THEN true ELSE false END as for_each_row
+		FROM information_schema.triggers t
+		WHERE t.trigger_schema = $1`
+
+	var args []interface{}
+	args = append(args, schema)
+
+	if tableName != "" {
+		query += " AND t.event_object_table = $2"
+		args = append(args, tableName)
+	}
+
+	query += " ORDER BY t.event_object_table, t.trigger_name"
+
+	rows, err := conn.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query error: %v", err)
+	}
+	defer rows.Close()
+
+	var triggers []TriggerInfo
+	for rows.Next() {
+		var trigger TriggerInfo
+
+		err := rows.Scan(
+			&trigger.Name,
+			&trigger.Schema,
+			&trigger.TableName,
+			&trigger.Event,
+			&trigger.Timing,
+			&trigger.ForEachRow,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan error: %v", err)
+		}
+
+		triggers = append(triggers, trigger)
+	}
+
+	return triggers, rows.Err()
+}
+
+func getMySQLTriggers(ctx context.Context, conn *sql.DB, tableName, schema string) ([]TriggerInfo, error) {
+	query := `
+		SELECT
+			trigger_name,
+			trigger_schema,
+			event_object_table,
+			event_manipulation,
+			action_timing,
+			true as for_each_row
+		FROM information_schema.triggers
+		WHERE trigger_schema = ?`
+
+	var args []interface{}
+	args = append(args, schema)
+
+	if tableName != "" {
+		query += " AND event_object_table = ?"
+		args = append(args, tableName)
+	}
+
+	query += " ORDER BY event_object_table, trigger_name"
+
+	rows, err := conn.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query error: %v", err)
+	}
+	defer rows.Close()
+
+	var triggers []TriggerInfo
+	for rows.Next() {
+		var trigger TriggerInfo
+
+		err := rows.Scan(
+			&trigger.Name,
+			&trigger.Schema,
+			&trigger.TableName,
+			&trigger.Event,
+			&trigger.Timing,
+			&trigger.ForEachRow,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan error: %v", err)
+		}
+
+		triggers = append(triggers, trigger)
+	}
+
+	return triggers, rows.Err()
+}
+
+func getPostgresTriggerDefinition(ctx context.Context, conn *sql.DB, triggerName, schema string) (GetTriggerDefinitionOutput, error) {
+	query := `
+		SELECT
+			t.trigger_name,
+			t.trigger_schema,
+			t.event_object_table,
+			t.event_manipulation,
+			t.action_timing,
+			pg_get_triggerdef(pg_trigger.oid) as definition
+		FROM information_schema.triggers t
+		JOIN pg_trigger ON pg_trigger.tgname = t.trigger_name
+		JOIN pg_class ON pg_class.oid = pg_trigger.tgrelid
+		JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
+		WHERE t.trigger_name = $1
+			AND t.trigger_schema = $2
+			AND pg_namespace.nspname = $2`
+
+	var output GetTriggerDefinitionOutput
+
+	err := conn.QueryRowContext(ctx, query, triggerName, schema).Scan(
+		&output.TriggerName,
+		&output.Schema,
+		&output.TableName,
+		&output.Event,
+		&output.Timing,
+		&output.Definition,
+	)
+
+	if err == sql.ErrNoRows {
+		return GetTriggerDefinitionOutput{}, fmt.Errorf("trigger '%s' not found in schema '%s'", triggerName, schema)
+	}
+	if err != nil {
+		return GetTriggerDefinitionOutput{}, fmt.Errorf("query error: %v", err)
+	}
+
+	return output, nil
+}
+
+func getMySQLTriggerDefinition(ctx context.Context, conn *sql.DB, triggerName, schema string) (GetTriggerDefinitionOutput, error) {
+	query := `
+		SELECT
+			trigger_name,
+			trigger_schema,
+			event_object_table,
+			event_manipulation,
+			action_timing,
+			action_statement as definition
+		FROM information_schema.triggers
+		WHERE trigger_name = ?
+			AND trigger_schema = ?`
+
+	var output GetTriggerDefinitionOutput
+
+	err := conn.QueryRowContext(ctx, query, triggerName, schema).Scan(
+		&output.TriggerName,
+		&output.Schema,
+		&output.TableName,
+		&output.Event,
+		&output.Timing,
+		&output.Definition,
+	)
+
+	if err == sql.ErrNoRows {
+		return GetTriggerDefinitionOutput{}, fmt.Errorf("trigger '%s' not found in schema '%s'", triggerName, schema)
+	}
+	if err != nil {
+		return GetTriggerDefinitionOutput{}, fmt.Errorf("query error: %v", err)
+	}
+
+	return output, nil
+}

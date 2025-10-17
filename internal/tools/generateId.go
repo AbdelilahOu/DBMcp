@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/lucsky/cuid"
@@ -41,23 +42,29 @@ func GetGenerateIdTool() *ToolDefinition[GenerateIdInput, GenerateIdOutput] {
 
 			for i := 0; i < input.Count; i++ {
 				var id string
-				switch input.Type {
+				switch strings.ToLower(input.Type) {
+				case "uuid-v1":
 				case "uuid_v1":
 					id, err = generateUUIDv1()
+				case "uuid-v3":
 				case "uuid_v3":
 					if input.Namespace == "" || input.Name == "" {
 						return nil, GenerateIdOutput{}, fmt.Errorf("namespace and name are required for UUID v3")
 					}
 					id, err = generateUUIDv3(input.Namespace, input.Name)
+				case "uuid-v4":
 				case "uuid_v4":
 					id, err = generateUUIDv4()
+				case "uuid-v5":
 				case "uuid_v5":
 					if input.Namespace == "" || input.Name == "" {
 						return nil, GenerateIdOutput{}, fmt.Errorf("namespace and name are required for UUID v5")
 					}
 					id, err = generateUUIDv5(input.Namespace, input.Name)
+				case "uuid-v6":
 				case "uuid_v6":
 					id, err = generateUUIDv6()
+				case "uuid-v7":
 				case "uuid_v7":
 					id, err = generateUUIDv7()
 				case "cuid":
