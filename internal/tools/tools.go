@@ -15,9 +15,33 @@ func RegisterTools(s *mcp.Server, cfg *config.Config) {
 	GetListTablesTool().Register(s)
 	GetDescribeTableTool().Register(s)
 	GetAnalyzeTableTool().Register(s)
+
 	GetExecuteQueryTool().Register(s)
 	GetSelectQueryTool().Register(s)
 	GetShowQueryTool().Register(s)
-	GetExplainQueryTool().Register(s)
+
 	GetGenerateIdTool().Register(s)
+
+	GetListEnumsTool().Register(s)
+	GetEnumValuesTool().Register(s)
+
+	GetListForeignKeysTool().Register(s)
+	GetTableRelationshipsTool().Register(s)
+
+	GetListViewsTool().Register(s)
+	GetViewDefinitionTool().Register(s)
+	GetListMaterializedViewsTool().Register(s)
+
+	GetListSequencesTool().Register(s)
+	GetSequenceInfoTool().Register(s)
+
+	GetListTriggersTool().Register(s)
+	GetTriggerDefinitionTool().Register(s)
+
+	GetListFunctionsTool().Register(s)
+	GetFunctionDefinitionTool().Register(s)
+
+	GetFindColumnTool().Register(s)
+
+	GetListConstraintsTool().Register(s)
 }
