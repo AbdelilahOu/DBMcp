@@ -13,12 +13,12 @@ import (
 )
 
 type ListSequencesInput struct {
-	Schema string `json:"schema,omitempty" jsonschema_description:"Optional schema name to filter sequences"`
+	Schema string `json:"sch,omitempty" jsonschema_description:"Optional schema name to filter sequences"`
 }
 
 type SequenceInfo struct {
 	Name   string `json:"name" jsonschema_description:"Sequence name"`
-	Schema string `json:"schema" jsonschema_description:"Schema name"`
+	Schema string `json:"sch" jsonschema_description:"Schema name"`
 }
 
 type ListSequencesOutput struct {
@@ -26,26 +26,26 @@ type ListSequencesOutput struct {
 }
 
 type GetSequenceInfoInput struct {
-	SequenceName string `json:"sequence_name" jsonschema:"required" jsonschema_description:"Name of the sequence"`
-	Schema       string `json:"schema,omitempty" jsonschema_description:"Optional schema name"`
+	SequenceName string `json:"seq" jsonschema:"required" jsonschema_description:"Name of the sequence"`
+	Schema       string `json:"sch,omitempty" jsonschema_description:"Optional schema name"`
 }
 
 type GetSequenceInfoOutput struct {
-	SequenceName string `json:"sequence_name" jsonschema_description:"Name of the sequence"`
-	Schema       string `json:"schema" jsonschema_description:"Schema of the sequence"`
+	SequenceName string `json:"seq" jsonschema_description:"Name of the sequence"`
+	Schema       string `json:"sch" jsonschema_description:"Schema of the sequence"`
 	LastValue    int64  `json:"last_value" jsonschema_description:"Last value returned by the sequence"`
 	StartValue   int64  `json:"start_value" jsonschema_description:"Start value of the sequence"`
 	IncrementBy  int64  `json:"increment_by" jsonschema_description:"Increment value"`
 	MinValue     *int64 `json:"min_value,omitempty" jsonschema_description:"Minimum value (null if no minimum)"`
 	MaxValue     *int64 `json:"max_value,omitempty" jsonschema_description:"Maximum value (null if no maximum)"`
 	CacheSize    int64  `json:"cache_size" jsonschema_description:"Number of sequence values to cache"`
-	Cycle        bool   `json:"cycle" jsonschema_description:"Whether the sequence cycles when reaching max/min"`
+	Cycle        bool   `json:"cycle,omitempty" jsonschema_description:"Whether the sequence cycles when reaching max/min"`
 }
 
 func GetListSequencesTool() *ToolDefinition[ListSequencesInput, ListSequencesOutput] {
 	return NewToolDefinition[ListSequencesInput, ListSequencesOutput](
 		"list_sequences",
-		"List all sequences in the database or a specific schema (PostgreSQL only). Sequences are used for auto-incrementing values. Returns sequence names and schemas. For detailed sequence information use get_sequence_info. Note: MySQL uses AUTO_INCREMENT instead of sequences.",
+		"List sequences (PostgreSQL only). For auto-increment values. Returns names, schemas. Use get_sequence_info for details. Note: MySQL uses AUTO_INCREMENT.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListSequencesInput) (*mcp.CallToolResult, ListSequencesOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {
@@ -139,7 +139,7 @@ func GetListSequencesTool() *ToolDefinition[ListSequencesInput, ListSequencesOut
 func GetSequenceInfoTool() *ToolDefinition[GetSequenceInfoInput, GetSequenceInfoOutput] {
 	return NewToolDefinition[GetSequenceInfoInput, GetSequenceInfoOutput](
 		"get_sequence_info",
-		"Get detailed information about a specific sequence (PostgreSQL only). Returns current value, start value, increment, min/max values, cache size, and cycle behavior. Use this to understand sequence configuration or troubleshoot auto-increment issues.",
+		"Get sequence details (PostgreSQL only). Returns current/start value, increment, min/max, cache, cycle. For troubleshooting auto-increment.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetSequenceInfoInput) (*mcp.CallToolResult, GetSequenceInfoOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {

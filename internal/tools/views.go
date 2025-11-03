@@ -13,12 +13,12 @@ import (
 )
 
 type ListViewsInput struct {
-	Schema string `json:"schema,omitempty" jsonschema_description:"Optional schema name to filter views"`
+	Schema string `json:"sch,omitempty" jsonschema_description:"Optional schema name to filter views"`
 }
 
 type ViewInfo struct {
 	Name   string `json:"name" jsonschema_description:"View name"`
-	Schema string `json:"schema" jsonschema_description:"Schema name"`
+	Schema string `json:"sch" jsonschema_description:"Schema name"`
 }
 
 type ListViewsOutput struct {
@@ -26,23 +26,23 @@ type ListViewsOutput struct {
 }
 
 type GetViewDefinitionInput struct {
-	ViewName string `json:"view_name" jsonschema:"required" jsonschema_description:"Name of the view"`
-	Schema   string `json:"schema,omitempty" jsonschema_description:"Optional schema name"`
+	ViewName string `json:"view" jsonschema:"required" jsonschema_description:"Name of the view"`
+	Schema   string `json:"sch,omitempty" jsonschema_description:"Optional schema name"`
 }
 
 type GetViewDefinitionOutput struct {
-	ViewName   string `json:"view_name" jsonschema_description:"Name of the view"`
-	Schema     string `json:"schema" jsonschema_description:"Schema of the view"`
-	Definition string `json:"definition" jsonschema_description:"SQL definition of the view"`
+	ViewName   string `json:"view" jsonschema_description:"Name of the view"`
+	Schema     string `json:"sch" jsonschema_description:"Schema of the view"`
+	Definition string `json:"def" jsonschema_description:"SQL definition of the view"`
 }
 
 type ListMaterializedViewsInput struct {
-	Schema string `json:"schema,omitempty" jsonschema_description:"Optional schema name to filter materialized views"`
+	Schema string `json:"sch,omitempty" jsonschema_description:"Optional schema name to filter materialized views"`
 }
 
 type MaterializedViewInfo struct {
 	Name   string `json:"name" jsonschema_description:"Materialized view name"`
-	Schema string `json:"schema" jsonschema_description:"Schema name"`
+	Schema string `json:"sch" jsonschema_description:"Schema name"`
 }
 
 type ListMaterializedViewsOutput struct {
@@ -52,7 +52,7 @@ type ListMaterializedViewsOutput struct {
 func GetListViewsTool() *ToolDefinition[ListViewsInput, ListViewsOutput] {
 	return NewToolDefinition[ListViewsInput, ListViewsOutput](
 		"list_views",
-		"List all views in the database or a specific schema. Returns view names and schemas. Views are virtual tables based on SELECT queries. Use this to discover what views exist, separate from regular tables. For the SQL definition of a view, use get_view_definition.",
+		"List views in DB or schema. Returns names, schemas. Views are virtual tables. Use get_view_definition for SQL.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListViewsInput) (*mcp.CallToolResult, ListViewsOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {
@@ -162,7 +162,7 @@ func GetListViewsTool() *ToolDefinition[ListViewsInput, ListViewsOutput] {
 func GetViewDefinitionTool() *ToolDefinition[GetViewDefinitionInput, GetViewDefinitionOutput] {
 	return NewToolDefinition[GetViewDefinitionInput, GetViewDefinitionOutput](
 		"get_view_definition",
-		"Get the SQL definition of a specific view. Returns the complete SELECT statement that defines the view. Use this to understand how a view is constructed and what data it returns.",
+		"Get view SQL definition. Returns complete SELECT statement showing view construction.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetViewDefinitionInput) (*mcp.CallToolResult, GetViewDefinitionOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {
@@ -230,7 +230,7 @@ func GetViewDefinitionTool() *ToolDefinition[GetViewDefinitionInput, GetViewDefi
 func GetListMaterializedViewsTool() *ToolDefinition[ListMaterializedViewsInput, ListMaterializedViewsOutput] {
 	return NewToolDefinition[ListMaterializedViewsInput, ListMaterializedViewsOutput](
 		"list_materialized_views",
-		"List all materialized views in the database (PostgreSQL only). Materialized views are views that store query results physically, unlike regular views. Returns materialized view names and schemas. Note: MySQL does not support materialized views.",
+		"List materialized views (PostgreSQL only). Store results physically unlike regular views. Note: MySQL not supported.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListMaterializedViewsInput) (*mcp.CallToolResult, ListMaterializedViewsOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {

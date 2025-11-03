@@ -13,15 +13,15 @@ import (
 )
 
 type ListConstraintsInput struct {
-	TableName string `json:"table_name,omitempty" jsonschema_description:"Optional table name to filter constraints"`
-	Schema    string `json:"schema,omitempty" jsonschema_description:"Optional schema name"`
+	TableName string `json:"tbl,omitempty" jsonschema_description:"Optional table name to filter constraints"`
+	Schema    string `json:"sch,omitempty" jsonschema_description:"Optional schema name"`
 }
 
 type ConstraintInfo struct {
-	ConstraintName   string   `json:"constraint_name" jsonschema_description:"Name of the constraint"`
+	ConstraintName   string   `json:"cname" jsonschema_description:"Name of the constraint"`
 	ConstraintType   string   `json:"constraint_type" jsonschema_description:"Type of constraint (PRIMARY KEY, FOREIGN KEY, UNIQUE, CHECK)"`
-	TableName        string   `json:"table_name" jsonschema_description:"Table the constraint is on"`
-	TableSchema      string   `json:"table_schema" jsonschema_description:"Schema of the table"`
+	TableName        string   `json:"tbl" jsonschema_description:"Table the constraint is on"`
+	TableSchema      string   `json:"sch" jsonschema_description:"Schema of the table"`
 	Columns          []string `json:"columns" jsonschema_description:"Columns involved in the constraint"`
 	CheckClause      string   `json:"check_clause,omitempty" jsonschema_description:"CHECK constraint expression (if applicable)"`
 	ReferencedTable  string   `json:"referenced_table,omitempty" jsonschema_description:"Referenced table (for foreign keys)"`
@@ -35,7 +35,7 @@ type ListConstraintsOutput struct {
 func GetListConstraintsTool() *ToolDefinition[ListConstraintsInput, ListConstraintsOutput] {
 	return NewToolDefinition[ListConstraintsInput, ListConstraintsOutput](
 		"list_constraints",
-		"List all constraints in the database or for a specific table. Returns primary keys, foreign keys, unique constraints, and check constraints with their definitions. Use this to understand all data integrity rules and constraints applied to tables. For detailed foreign key information specifically, use list_foreign_keys.",
+		"List constraints in DB or table. Returns PKs, FKs, unique, check constraints. Shows data integrity rules. Use list_foreign_keys for detailed FK info.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListConstraintsInput) (*mcp.CallToolResult, ListConstraintsOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {

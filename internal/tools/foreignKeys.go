@@ -13,52 +13,52 @@ import (
 )
 
 type ListForeignKeysInput struct {
-	TableName string `json:"table_name,omitempty" jsonschema_description:"Optional table name to filter foreign keys"`
-	Schema    string `json:"schema,omitempty" jsonschema_description:"Optional schema name"`
+	TableName string `json:"tbl,omitempty" jsonschema_description:"Optional table name to filter foreign keys"`
+	Schema    string `json:"sch,omitempty" jsonschema_description:"Optional schema name"`
 }
 
 type ForeignKeyInfo struct {
-	ConstraintName    string   `json:"constraint_name" jsonschema_description:"Name of the foreign key constraint"`
-	TableName         string   `json:"table_name" jsonschema_description:"Table containing the foreign key"`
-	TableSchema       string   `json:"table_schema" jsonschema_description:"Schema of the table"`
-	Columns           []string `json:"columns" jsonschema_description:"Columns in the foreign key"`
-	ReferencedTable   string   `json:"referenced_table" jsonschema_description:"Table being referenced"`
-	ReferencedSchema  string   `json:"referenced_schema" jsonschema_description:"Schema of the referenced table"`
-	ReferencedColumns []string `json:"referenced_columns" jsonschema_description:"Columns being referenced"`
-	OnDelete          string   `json:"on_delete" jsonschema_description:"Action on delete (CASCADE, SET NULL, etc.)"`
-	OnUpdate          string   `json:"on_update" jsonschema_description:"Action on update (CASCADE, SET NULL, etc.)"`
+	ConstraintName    string   `json:"cname" jsonschema_description:"Name of the foreign key constraint"`
+	TableName         string   `json:"tbl" jsonschema_description:"Table containing the foreign key"`
+	TableSchema       string   `json:"sch" jsonschema_description:"Schema of the table"`
+	Columns           []string `json:"cols" jsonschema_description:"Columns in the foreign key"`
+	ReferencedTable   string   `json:"ref_tbl" jsonschema_description:"Table being referenced"`
+	ReferencedSchema  string   `json:"ref_sch,omitempty" jsonschema_description:"Schema of the referenced table"`
+	ReferencedColumns []string `json:"ref_cols" jsonschema_description:"Columns being referenced"`
+	OnDelete          string   `json:"on_del,omitempty" jsonschema_description:"Action on delete (CASCADE, SET NULL, etc.)"`
+	OnUpdate          string   `json:"on_upd,omitempty" jsonschema_description:"Action on update (CASCADE, SET NULL, etc.)"`
 }
 
 type ListForeignKeysOutput struct {
-	ForeignKeys []ForeignKeyInfo `json:"foreign_keys" jsonschema_description:"Array of foreign key information"`
+	ForeignKeys []ForeignKeyInfo `json:"fks" jsonschema_description:"Array of foreign key information"`
 }
 
 type GetTableRelationshipsInput struct {
-	TableName string `json:"table_name" jsonschema:"required" jsonschema_description:"Name of the table"`
-	Schema    string `json:"schema,omitempty" jsonschema_description:"Optional schema name"`
+	TableName string `json:"tbl" jsonschema:"required" jsonschema_description:"Name of the table"`
+	Schema    string `json:"sch,omitempty" jsonschema_description:"Optional schema name"`
 }
 
 type RelationshipInfo struct {
 	Type           string   `json:"type" jsonschema_description:"Relationship type: 'outgoing' (references another table) or 'incoming' (referenced by another table)"`
-	ConstraintName string   `json:"constraint_name" jsonschema_description:"Name of the foreign key constraint"`
-	RelatedTable   string   `json:"related_table" jsonschema_description:"The other table in the relationship"`
-	RelatedSchema  string   `json:"related_schema" jsonschema_description:"Schema of the related table"`
-	Columns        []string `json:"columns" jsonschema_description:"Columns involved in this table"`
-	RelatedColumns []string `json:"related_columns" jsonschema_description:"Columns in the related table"`
-	OnDelete       string   `json:"on_delete" jsonschema_description:"Action on delete"`
-	OnUpdate       string   `json:"on_update" jsonschema_description:"Action on update"`
+	ConstraintName string   `json:"cname" jsonschema_description:"Name of the foreign key constraint"`
+	RelatedTable   string   `json:"rel_tbl" jsonschema_description:"The other table in the relationship"`
+	RelatedSchema  string   `json:"rel_sch,omitempty" jsonschema_description:"Schema of the related table"`
+	Columns        []string `json:"cols" jsonschema_description:"Columns involved in this table"`
+	RelatedColumns []string `json:"rel_cols" jsonschema_description:"Columns in the related table"`
+	OnDelete       string   `json:"on_del,omitempty" jsonschema_description:"Action on delete"`
+	OnUpdate       string   `json:"on_upd,omitempty" jsonschema_description:"Action on update"`
 }
 
 type GetTableRelationshipsOutput struct {
-	TableName     string             `json:"table_name" jsonschema_description:"Name of the table"`
-	TableSchema   string             `json:"table_schema" jsonschema_description:"Schema of the table"`
-	Relationships []RelationshipInfo `json:"relationships" jsonschema_description:"Array of relationships (both incoming and outgoing)"`
+	TableName     string             `json:"tbl" jsonschema_description:"Name of the table"`
+	TableSchema   string             `json:"sch" jsonschema_description:"Schema of the table"`
+	Relationships []RelationshipInfo `json:"rels" jsonschema_description:"Array of relationships (both incoming and outgoing)"`
 }
 
 func GetListForeignKeysTool() *ToolDefinition[ListForeignKeysInput, ListForeignKeysOutput] {
 	return NewToolDefinition[ListForeignKeysInput, ListForeignKeysOutput](
 		"list_foreign_keys",
-		"List all foreign key constraints in the database or for a specific table. Returns detailed information about foreign key relationships including columns, referenced tables, and referential actions (CASCADE, SET NULL, etc.). Use this to understand table relationships and referential integrity constraints.",
+		"List FK constraints in DB or table. Returns columns, referenced tables, actions (CASCADE, SET NULL, etc.). Shows relationships and referential integrity.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListForeignKeysInput) (*mcp.CallToolResult, ListForeignKeysOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {
@@ -112,7 +112,7 @@ func GetListForeignKeysTool() *ToolDefinition[ListForeignKeysInput, ListForeignK
 func GetTableRelationshipsTool() *ToolDefinition[GetTableRelationshipsInput, GetTableRelationshipsOutput] {
 	return NewToolDefinition[GetTableRelationshipsInput, GetTableRelationshipsOutput](
 		"get_table_relationships",
-		"Get all relationships for a specific table, including both outgoing foreign keys (tables this table references) and incoming foreign keys (tables that reference this table). Provides a complete view of how a table relates to other tables in the database schema.",
+		"Get all relationships for table: outgoing FKs (refs other tables) and incoming FKs (other tables ref this). Complete relationship view.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetTableRelationshipsInput) (*mcp.CallToolResult, GetTableRelationshipsOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {

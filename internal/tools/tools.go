@@ -6,7 +6,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func RegisterTools(s *mcp.Server, cfg *config.Config) {
+func RegisterTools(s *mcp.Server, cfg *config.Config, dbType string) {
 	GetListConnectionsTool(cfg).Register(s)
 	GetSwitchConnectionTool(cfg).Register(s)
 	GetTestConnectionTool(cfg).Register(s)
@@ -22,18 +22,11 @@ func RegisterTools(s *mcp.Server, cfg *config.Config) {
 
 	GetGenerateIdTool().Register(s)
 
-	GetListEnumsTool().Register(s)
-	GetEnumValuesTool().Register(s)
-
 	GetListForeignKeysTool().Register(s)
 	GetTableRelationshipsTool().Register(s)
 
 	GetListViewsTool().Register(s)
 	GetViewDefinitionTool().Register(s)
-	GetListMaterializedViewsTool().Register(s)
-
-	GetListSequencesTool().Register(s)
-	GetSequenceInfoTool().Register(s)
 
 	GetListTriggersTool().Register(s)
 	GetTriggerDefinitionTool().Register(s)
@@ -44,4 +37,13 @@ func RegisterTools(s *mcp.Server, cfg *config.Config) {
 	GetFindColumnTool().Register(s)
 
 	GetListConstraintsTool().Register(s)
+
+	if dbType == "" || dbType == "postgres" {
+		GetListEnumsTool().Register(s)
+		GetEnumValuesTool().Register(s)
+		GetListMaterializedViewsTool().Register(s)
+		GetListSequencesTool().Register(s)
+		GetSequenceInfoTool().Register(s)
+	}
+
 }

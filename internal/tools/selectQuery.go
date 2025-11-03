@@ -13,18 +13,18 @@ import (
 )
 
 type SelectQueryInput struct {
-	Query string `json:"query" jsonschema:"required" jsonschema_description:"SELECT SQL query to execute"`
+	Query string `json:"q" jsonschema:"required" jsonschema_description:"SELECT SQL query to execute"`
 }
 
 type SelectQueryOutput struct {
 	Data    []map[string]interface{} `json:"data" jsonschema_description:"Query results"`
-	Message string                   `json:"message" jsonschema_description:"Success message"`
+	Message string                   `json:"msg" jsonschema_description:"Success message"`
 }
 
 func GetSelectQueryTool() *ToolDefinition[SelectQueryInput, SelectQueryOutput] {
 	return NewToolDefinition[SelectQueryInput, SelectQueryOutput](
 		"select_query",
-		"Execute SELECT SQL queries to retrieve actual data rows from tables. Use this tool when you need to see specific column values, filter data with WHERE clauses, or perform joins. DO NOT use this for counting rows (use analyze_table instead) or getting table metadata (use describe_table instead). Only use this when you need to examine or return the actual data content.",
+		"Execute SELECT queries for actual data rows. Supports WHERE, joins. DO NOT use for row counts (analyze_table) or metadata (describe_table). Data content only.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input SelectQueryInput) (*mcp.CallToolResult, SelectQueryOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {
@@ -36,10 +36,20 @@ func GetSelectQueryTool() *ToolDefinition[SelectQueryInput, SelectQueryOutput] {
 				return nil, SelectQueryOutput{}, fmt.Errorf("only SELECT queries are allowed")
 			}
 
+			// Add default LIMIT if not specified
+			query := input.Query
+			if !strings.Contains(queryLower, "limit") {
+				query = strings.TrimSpace(query)
+				if strings.HasSuffix(query, ";") {
+					query = strings.TrimSuffix(query, ";")
+				}
+				query += " LIMIT 100"
+			}
+
 			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 			defer cancel()
 
-			rows, err := sessionState.Conn.QueryContext(ctx, input.Query)
+			rows, err := sessionState.Conn.QueryContext(ctx, query)
 
 			if err != nil {
 				logger.LogDatabaseOperation("SELECT", input.Query, 0, err)
@@ -82,7 +92,7 @@ func GetSelectQueryTool() *ToolDefinition[SelectQueryInput, SelectQueryOutput] {
 
 			logger.LogDatabaseOperation("SELECT", input.Query, int64(len(results)), nil)
 
-			message := fmt.Sprintf("SELECT query completed successfully (%d rows returned)", len(results))
+			message := fmt.Sprintf("OK (%d rows)", len(results))
 
 			output := SelectQueryOutput{
 				Data:    results,

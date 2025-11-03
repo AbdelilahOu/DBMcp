@@ -13,17 +13,17 @@ import (
 )
 
 type ListTriggersInput struct {
-	TableName string `json:"table_name,omitempty" jsonschema_description:"Optional table name to filter triggers"`
-	Schema    string `json:"schema,omitempty" jsonschema_description:"Optional schema name"`
+	TableName string `json:"tbl,omitempty" jsonschema_description:"Optional table name to filter triggers"`
+	Schema    string `json:"sch,omitempty" jsonschema_description:"Optional schema name"`
 }
 
 type TriggerInfo struct {
 	Name       string `json:"name" jsonschema_description:"Trigger name"`
-	Schema     string `json:"schema" jsonschema_description:"Schema name"`
-	TableName  string `json:"table_name" jsonschema_description:"Table the trigger is attached to"`
+	Schema     string `json:"sch" jsonschema_description:"Schema name"`
+	TableName  string `json:"tbl" jsonschema_description:"Table the trigger is attached to"`
 	Event      string `json:"event" jsonschema_description:"Trigger event (INSERT, UPDATE, DELETE)"`
 	Timing     string `json:"timing" jsonschema_description:"When trigger fires (BEFORE, AFTER, INSTEAD OF)"`
-	ForEachRow bool   `json:"for_each_row" jsonschema_description:"Whether trigger fires for each row or once per statement"`
+	ForEachRow bool   `json:"for_each_row,omitempty" jsonschema_description:"Whether trigger fires for each row or once per statement"`
 }
 
 type ListTriggersOutput struct {
@@ -31,23 +31,23 @@ type ListTriggersOutput struct {
 }
 
 type GetTriggerDefinitionInput struct {
-	TriggerName string `json:"trigger_name" jsonschema:"required" jsonschema_description:"Name of the trigger"`
-	Schema      string `json:"schema,omitempty" jsonschema_description:"Optional schema name"`
+	TriggerName string `json:"trg" jsonschema:"required" jsonschema_description:"Name of the trigger"`
+	Schema      string `json:"sch,omitempty" jsonschema_description:"Optional schema name"`
 }
 
 type GetTriggerDefinitionOutput struct {
-	TriggerName string `json:"trigger_name" jsonschema_description:"Name of the trigger"`
-	Schema      string `json:"schema" jsonschema_description:"Schema of the trigger"`
-	TableName   string `json:"table_name" jsonschema_description:"Table the trigger is attached to"`
+	TriggerName string `json:"trg" jsonschema_description:"Name of the trigger"`
+	Schema      string `json:"sch" jsonschema_description:"Schema of the trigger"`
+	TableName   string `json:"tbl" jsonschema_description:"Table the trigger is attached to"`
 	Event       string `json:"event" jsonschema_description:"Trigger event"`
 	Timing      string `json:"timing" jsonschema_description:"When trigger fires"`
-	Definition  string `json:"definition" jsonschema_description:"SQL definition or body of the trigger"`
+	Definition  string `json:"def" jsonschema_description:"SQL definition or body of the trigger"`
 }
 
 func GetListTriggersTool() *ToolDefinition[ListTriggersInput, ListTriggersOutput] {
 	return NewToolDefinition[ListTriggersInput, ListTriggersOutput](
 		"list_triggers",
-		"List all triggers in the database or for a specific table. Triggers are automated actions that fire in response to INSERT, UPDATE, or DELETE events. Returns trigger names, associated tables, events, and timing (BEFORE/AFTER). Use this to discover database automation. For trigger SQL definition use get_trigger_definition.",
+		"List triggers in DB or table. Automated actions on INSERT/UPDATE/DELETE. Returns names, tables, events, timing (BEFORE/AFTER). Use get_trigger_definition for SQL.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListTriggersInput) (*mcp.CallToolResult, ListTriggersOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {
@@ -101,7 +101,7 @@ func GetListTriggersTool() *ToolDefinition[ListTriggersInput, ListTriggersOutput
 func GetTriggerDefinitionTool() *ToolDefinition[GetTriggerDefinitionInput, GetTriggerDefinitionOutput] {
 	return NewToolDefinition[GetTriggerDefinitionInput, GetTriggerDefinitionOutput](
 		"get_trigger_definition",
-		"Get the SQL definition of a specific trigger. Returns the complete trigger definition including the trigger function/body, event type, timing, and associated table. Use this to understand what a trigger does and how it's implemented.",
+		"Get trigger SQL definition. Returns complete definition: function/body, event type, timing, table. Shows implementation.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetTriggerDefinitionInput) (*mcp.CallToolResult, GetTriggerDefinitionOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {

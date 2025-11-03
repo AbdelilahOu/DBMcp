@@ -22,13 +22,13 @@ type GenerateIdOutput struct {
 	IDs     []string `json:"ids" jsonschema_description:"Generated IDs"`
 	Type    string   `json:"type" jsonschema_description:"Type of ID generated"`
 	Count   int      `json:"count" jsonschema_description:"Number of IDs generated"`
-	Message string   `json:"message" jsonschema_description:"Success message"`
+	Message string   `json:"msg" jsonschema_description:"Success message"`
 }
 
 func GetGenerateIdTool() *ToolDefinition[GenerateIdInput, GenerateIdOutput] {
 	return NewToolDefinition[GenerateIdInput, GenerateIdOutput](
 		"generate_id",
-		"Generate various types of unique identifiers including UUID v1-v7 and CUID/CUID2. UUID versions: v1 (timestamp+MAC), v3 (MD5 hash), v4 (random), v5 (SHA-1 hash), v6 (reordered timestamp), v7 (Unix timestamp). CUID: collision-resistant ids optimized for horizontal scaling. Use this tool when you need to generate unique identifiers for testing, database records, or any other purpose.",
+		"Generate unique IDs: UUID v1-v7, CUID/CUID2. UUID: v1(timestamp+MAC), v3(MD5), v4(random), v5(SHA-1), v6(reordered time), v7(Unix time). CUID: collision-resistant, horizontal scaling.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GenerateIdInput) (*mcp.CallToolResult, GenerateIdOutput, error) {
 			if input.Count <= 0 {
 				input.Count = 1
@@ -43,30 +43,37 @@ func GetGenerateIdTool() *ToolDefinition[GenerateIdInput, GenerateIdOutput] {
 			for i := 0; i < input.Count; i++ {
 				var id string
 				switch strings.ToLower(input.Type) {
+				case "v1":
 				case "uuid-v1":
 				case "uuid_v1":
 					id, err = generateUUIDv1()
+				case "v3":
 				case "uuid-v3":
 				case "uuid_v3":
 					if input.Namespace == "" || input.Name == "" {
 						return nil, GenerateIdOutput{}, fmt.Errorf("namespace and name are required for UUID v3")
 					}
 					id, err = generateUUIDv3(input.Namespace, input.Name)
+				case "v4":
 				case "uuid-v4":
 				case "uuid_v4":
 					id, err = generateUUIDv4()
+				case "v5":
 				case "uuid-v5":
 				case "uuid_v5":
 					if input.Namespace == "" || input.Name == "" {
 						return nil, GenerateIdOutput{}, fmt.Errorf("namespace and name are required for UUID v5")
 					}
 					id, err = generateUUIDv5(input.Namespace, input.Name)
+				case "v6":
 				case "uuid-v6":
 				case "uuid_v6":
 					id, err = generateUUIDv6()
+				case "v7":
 				case "uuid-v7":
 				case "uuid_v7":
 					id, err = generateUUIDv7()
+				case "cuid2":
 				case "cuid":
 					id = cuid.New()
 				default:

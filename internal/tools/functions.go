@@ -13,14 +13,14 @@ import (
 )
 
 type ListFunctionsInput struct {
-	Schema string `json:"schema,omitempty" jsonschema_description:"Optional schema name to filter functions"`
+	Schema string `json:"sch,omitempty" jsonschema_description:"Optional schema name to filter functions"`
 }
 
 type FunctionInfo struct {
 	Name       string `json:"name" jsonschema_description:"Function name"`
-	Schema     string `json:"schema" jsonschema_description:"Schema name"`
-	ReturnType string `json:"return_type" jsonschema_description:"Return type of the function"`
-	Language   string `json:"language" jsonschema_description:"Language the function is written in (SQL, plpgsql, etc.)"`
+	Schema     string `json:"sch" jsonschema_description:"Schema name"`
+	ReturnType string `json:"rtype" jsonschema_description:"Return type of the function"`
+	Language   string `json:"lang" jsonschema_description:"Language the function is written in (SQL, plpgsql, etc.)"`
 }
 
 type ListFunctionsOutput struct {
@@ -28,23 +28,23 @@ type ListFunctionsOutput struct {
 }
 
 type GetFunctionDefinitionInput struct {
-	FunctionName string `json:"function_name" jsonschema:"required" jsonschema_description:"Name of the function"`
-	Schema       string `json:"schema,omitempty" jsonschema_description:"Optional schema name"`
+	FunctionName string `json:"fn" jsonschema:"required" jsonschema_description:"Name of the function"`
+	Schema       string `json:"sch,omitempty" jsonschema_description:"Optional schema name"`
 }
 
 type GetFunctionDefinitionOutput struct {
-	FunctionName string `json:"function_name" jsonschema_description:"Name of the function"`
-	Schema       string `json:"schema" jsonschema_description:"Schema of the function"`
-	ReturnType   string `json:"return_type" jsonschema_description:"Return type"`
-	Language     string `json:"language" jsonschema_description:"Language the function is written in"`
-	Definition   string `json:"definition" jsonschema_description:"Complete function definition/source code"`
-	Arguments    string `json:"arguments,omitempty" jsonschema_description:"Function arguments/parameters"`
+	FunctionName string `json:"fn" jsonschema_description:"Name of the function"`
+	Schema       string `json:"sch" jsonschema_description:"Schema of the function"`
+	ReturnType   string `json:"rtype" jsonschema_description:"Return type"`
+	Language     string `json:"lang" jsonschema_description:"Language the function is written in"`
+	Definition   string `json:"def" jsonschema_description:"Complete function definition/source code"`
+	Arguments    string `json:"args,omitempty" jsonschema_description:"Function arguments/parameters"`
 }
 
 func GetListFunctionsTool() *ToolDefinition[ListFunctionsInput, ListFunctionsOutput] {
 	return NewToolDefinition[ListFunctionsInput, ListFunctionsOutput](
 		"list_functions",
-		"List all user-defined functions and stored procedures in the database or a specific schema. Returns function names, schemas, return types, and implementation language. Use this to discover available stored procedures and functions. For complete function source code use get_function_definition.",
+		"List user-defined functions/procedures. Returns names, schemas, return types, language. Use get_function_definition for source code.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListFunctionsInput) (*mcp.CallToolResult, ListFunctionsOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {
@@ -98,7 +98,7 @@ func GetListFunctionsTool() *ToolDefinition[ListFunctionsInput, ListFunctionsOut
 func GetFunctionDefinitionTool() *ToolDefinition[GetFunctionDefinitionInput, GetFunctionDefinitionOutput] {
 	return NewToolDefinition[GetFunctionDefinitionInput, GetFunctionDefinitionOutput](
 		"get_function_definition",
-		"Get the complete source code and definition of a specific function or stored procedure. Returns function signature, parameters, return type, language, and full source code. Use this to understand function implementation and logic.",
+		"Get function source code and definition. Returns signature, params, return type, language, full source. Shows implementation.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetFunctionDefinitionInput) (*mcp.CallToolResult, GetFunctionDefinitionOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {

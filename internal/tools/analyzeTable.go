@@ -13,18 +13,18 @@ import (
 )
 
 type AnalyzeTableInput struct {
-	TableName string `json:"table_name" jsonschema:"required" jsonschema_description:"Name of the table to analyze"`
-	Schema    string `json:"schema,omitempty" jsonschema_description:"Optional schema name"`
+	TableName string `json:"tbl" jsonschema:"required" jsonschema_description:"Name of the table to analyze"`
+	Schema    string `json:"sch,omitempty" jsonschema_description:"Optional schema name"`
 }
 
 type TableStats struct {
-	TableName    string            `json:"table_name" jsonschema_description:"Table name"`
-	RowCount     int64             `json:"row_count" jsonschema_description:"Approximate number of rows"`
-	TableSize    string            `json:"table_size" jsonschema_description:"Table size in human-readable format"`
-	IndexSize    string            `json:"index_size" jsonschema_description:"Index size in human-readable format"`
-	TotalSize    string            `json:"total_size" jsonschema_description:"Total size (table + indexes)"`
-	ColumnStats  map[string]string `json:"column_stats,omitempty" jsonschema_description:"Basic statistics for columns"`
-	LastAnalyzed string            `json:"last_analyzed,omitempty" jsonschema_description:"When the table was last analyzed"`
+	TableName    string            `json:"tbl" jsonschema_description:"Table name"`
+	RowCount     int64             `json:"rows" jsonschema_description:"Approximate number of rows"`
+	TableSize    string            `json:"tbl_size" jsonschema_description:"Table size in human-readable format"`
+	IndexSize    string            `json:"idx_size,omitempty" jsonschema_description:"Index size in human-readable format"`
+	TotalSize    string            `json:"total,omitempty" jsonschema_description:"Total size (table + indexes)"`
+	ColumnStats  map[string]string `json:"col_stats,omitempty" jsonschema_description:"Basic statistics for columns"`
+	LastAnalyzed string            `json:"analyzed,omitempty" jsonschema_description:"When the table was last analyzed"`
 }
 
 type AnalyzeTableOutput struct {
@@ -34,7 +34,7 @@ type AnalyzeTableOutput struct {
 func GetAnalyzeTableTool() *ToolDefinition[AnalyzeTableInput, AnalyzeTableOutput] {
 	return NewToolDefinition[AnalyzeTableInput, AnalyzeTableOutput](
 		"analyze_table",
-		"PREFERRED tool for getting table metadata and statistics including row count, table size, index size, and column information. Use this instead of SELECT COUNT(*) queries for counting rows or getting table overview information. This tool is optimized for metadata retrieval and doesn't execute full table scans.",
+		"PREFERRED for table metadata: row count, sizes, column info. Use instead of SELECT COUNT(*). Optimized, no full table scans.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeTableInput) (*mcp.CallToolResult, AnalyzeTableOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {

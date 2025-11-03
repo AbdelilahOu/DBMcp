@@ -13,20 +13,20 @@ import (
 )
 
 type GetEnumValuesInput struct {
-	EnumName string `json:"enum_name" jsonschema:"required" jsonschema_description:"Name of the enum type"`
-	Schema   string `json:"schema,omitempty" jsonschema_description:"Optional schema name where the enum is defined"`
+	EnumName string `json:"enum" jsonschema:"required" jsonschema_description:"Name of the enum type"`
+	Schema   string `json:"sch,omitempty" jsonschema_description:"Optional schema name where the enum is defined"`
 }
 
 type GetEnumValuesOutput struct {
-	EnumName string   `json:"enum_name" jsonschema_description:"Name of the enum type"`
-	Schema   string   `json:"schema" jsonschema_description:"Schema where the enum is defined"`
+	EnumName string   `json:"enum" jsonschema_description:"Name of the enum type"`
+	Schema   string   `json:"sch" jsonschema_description:"Schema where the enum is defined"`
 	Values   []string `json:"values" jsonschema_description:"Array of enum values in order"`
 }
 
 func GetEnumValuesTool() *ToolDefinition[GetEnumValuesInput, GetEnumValuesOutput] {
 	return NewToolDefinition[GetEnumValuesInput, GetEnumValuesOutput](
 		"get_enum_values",
-		"Get all possible values for a specific enum type. Returns the enum name, schema, and an ordered list of all valid values. Use this when you need to know what values an enum type can accept. Note: MySQL does not have standalone ENUM types - use describe_table to see column-level ENUM constraints instead.",
+		"Get enum values for type. Returns name, schema, ordered list. Note: MySQL has no standalone ENUMs - use describe_table for column-level ENUMs.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetEnumValuesInput) (*mcp.CallToolResult, GetEnumValuesOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {
@@ -106,12 +106,12 @@ func GetEnumValuesTool() *ToolDefinition[GetEnumValuesInput, GetEnumValuesOutput
 }
 
 type ListEnumsInput struct {
-	Schema string `json:"schema,omitempty" jsonschema_description:"Optional schema name to filter enums"`
+	Schema string `json:"sch,omitempty" jsonschema_description:"Optional schema name to filter enums"`
 }
 
 type EnumInfo struct {
 	Name   string `json:"name" jsonschema_description:"Enum type name"`
-	Schema string `json:"schema" jsonschema_description:"Schema name where the enum is defined"`
+	Schema string `json:"sch" jsonschema_description:"Schema name where the enum is defined"`
 }
 
 type ListEnumsOutput struct {
@@ -121,7 +121,7 @@ type ListEnumsOutput struct {
 func GetListEnumsTool() *ToolDefinition[ListEnumsInput, ListEnumsOutput] {
 	return NewToolDefinition[ListEnumsInput, ListEnumsOutput](
 		"list_enums",
-		"Get a list of all enum types in the database or a specific schema. Returns enum names and their schemas. Use this when you need to discover what enum types exist. For detailed enum values use get_enum_values. Note: MySQL does not have standalone ENUM types - use describe_table to see column-level ENUM constraints instead.",
+		"List enum types in DB or schema. Returns names, schemas. Use get_enum_values for values. Note: MySQL has no standalone ENUMs.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListEnumsInput) (*mcp.CallToolResult, ListEnumsOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {
