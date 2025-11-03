@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/lucsky/cuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	cuid2 "github.com/nrednav/cuid2"
 )
 
 type GenerateIdInput struct {
@@ -20,15 +21,13 @@ type GenerateIdInput struct {
 
 type GenerateIdOutput struct {
 	IDs     []string `json:"ids" jsonschema_description:"Generated IDs"`
-	Type    string   `json:"type" jsonschema_description:"Type of ID generated"`
-	Count   int      `json:"count" jsonschema_description:"Number of IDs generated"`
 	Message string   `json:"msg" jsonschema_description:"Success message"`
 }
 
 func GetGenerateIdTool() *ToolDefinition[GenerateIdInput, GenerateIdOutput] {
 	return NewToolDefinition[GenerateIdInput, GenerateIdOutput](
 		"generate_id",
-		"Generate unique IDs: UUID v1-v7, CUID/CUID2. UUID: v1(timestamp+MAC), v3(MD5), v4(random), v5(SHA-1), v6(reordered time), v7(Unix time). CUID: collision-resistant, horizontal scaling.",
+		"Generate unique IDs: UUID v1-v7, CUID. UUID: v1(timestamp+MAC), v3(MD5), v4(random), v5(SHA-1), v6(reordered time), v7(Unix time). CUID: collision-resistant, horizontal scaling.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GenerateIdInput) (*mcp.CallToolResult, GenerateIdOutput, error) {
 			if input.Count <= 0 {
 				input.Count = 1
@@ -74,6 +73,7 @@ func GetGenerateIdTool() *ToolDefinition[GenerateIdInput, GenerateIdOutput] {
 				case "uuid_v7":
 					id, err = generateUUIDv7()
 				case "cuid2":
+					id = cuid2.Generate()
 				case "cuid":
 					id = cuid.New()
 				default:
@@ -89,8 +89,6 @@ func GetGenerateIdTool() *ToolDefinition[GenerateIdInput, GenerateIdOutput] {
 
 			output := GenerateIdOutput{
 				IDs:     ids,
-				Type:    input.Type,
-				Count:   input.Count,
 				Message: fmt.Sprintf("Successfully generated %d %s ID(s)", input.Count, input.Type),
 			}
 

@@ -230,7 +230,7 @@ func GetViewDefinitionTool() *ToolDefinition[GetViewDefinitionInput, GetViewDefi
 func GetListMaterializedViewsTool() *ToolDefinition[ListMaterializedViewsInput, ListMaterializedViewsOutput] {
 	return NewToolDefinition[ListMaterializedViewsInput, ListMaterializedViewsOutput](
 		"list_materialized_views",
-		"List materialized views (PostgreSQL only). Store results physically unlike regular views. Note: MySQL not supported.",
+		"List materialized views. Store results physically unlike regular views. Note: MySQL not supported.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListMaterializedViewsInput) (*mcp.CallToolResult, ListMaterializedViewsOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {

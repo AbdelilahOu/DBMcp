@@ -45,7 +45,7 @@ type GetSequenceInfoOutput struct {
 func GetListSequencesTool() *ToolDefinition[ListSequencesInput, ListSequencesOutput] {
 	return NewToolDefinition[ListSequencesInput, ListSequencesOutput](
 		"list_sequences",
-		"List sequences (PostgreSQL only). For auto-increment values. Returns names, schemas. Use get_sequence_info for details. Note: MySQL uses AUTO_INCREMENT.",
+		"List sequences. For auto-increment values. Returns names, schemas. Use get_sequence_info for details. Note: MySQL uses AUTO_INCREMENT.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListSequencesInput) (*mcp.CallToolResult, ListSequencesOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {
@@ -139,7 +139,7 @@ func GetListSequencesTool() *ToolDefinition[ListSequencesInput, ListSequencesOut
 func GetSequenceInfoTool() *ToolDefinition[GetSequenceInfoInput, GetSequenceInfoOutput] {
 	return NewToolDefinition[GetSequenceInfoInput, GetSequenceInfoOutput](
 		"get_sequence_info",
-		"Get sequence details (PostgreSQL only). Returns current/start value, increment, min/max, cache, cycle. For troubleshooting auto-increment.",
+		"Get sequence details. Returns current/start value, increment, min/max, cache, cycle. For troubleshooting auto-increment.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetSequenceInfoInput) (*mcp.CallToolResult, GetSequenceInfoOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {
