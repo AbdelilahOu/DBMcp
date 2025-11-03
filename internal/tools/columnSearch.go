@@ -14,19 +14,19 @@ import (
 )
 
 type FindColumnInput struct {
-	ColumnName string `json:"column_name" jsonschema:"required" jsonschema_description:"Column name to search for (supports partial matching)"`
-	Schema     string `json:"schema,omitempty" jsonschema_description:"Optional schema name to limit search"`
-	TableName  string `json:"table_name,omitempty" jsonschema_description:"Optional table name to limit search to a specific table"`
+	ColumnName string `json:"col" jsonschema:"required" jsonschema_description:"Column name to search for (supports partial matching)"`
+	Schema     string `json:"sch,omitempty" jsonschema_description:"Optional schema name to limit search"`
+	TableName  string `json:"tbl,omitempty" jsonschema_description:"Optional table name to limit search to a specific table"`
 	ExactMatch bool   `json:"exact_match,omitempty" jsonschema_description:"If true, only exact matches are returned. If false (default), partial matches are included"`
 }
 
 type ColumnLocation struct {
-	TableName   string `json:"table_name" jsonschema_description:"Table containing the column"`
-	TableSchema string `json:"table_schema" jsonschema_description:"Schema of the table"`
-	ColumnName  string `json:"column_name" jsonschema_description:"Column name"`
-	DataType    string `json:"data_type" jsonschema_description:"Data type of the column"`
-	IsNullable  bool   `json:"is_nullable" jsonschema_description:"Whether the column allows NULL values"`
-	Position    int    `json:"position" jsonschema_description:"Ordinal position of the column in the table"`
+	TableName   string `json:"tbl" jsonschema_description:"Table containing the column"`
+	TableSchema string `json:"sch" jsonschema_description:"Schema of the table"`
+	ColumnName  string `json:"col" jsonschema_description:"Column name"`
+	DataType    string `json:"dtype" jsonschema_description:"Data type of the column"`
+	IsNullable  bool   `json:"null" jsonschema_description:"Whether the column allows NULL values"`
+	Position    int    `json:"pos" jsonschema_description:"Ordinal position of the column in the table"`
 }
 
 type FindColumnOutput struct {
@@ -36,7 +36,7 @@ type FindColumnOutput struct {
 func GetFindColumnTool() *ToolDefinition[FindColumnInput, FindColumnOutput] {
 	return NewToolDefinition[FindColumnInput, FindColumnOutput](
 		"find_column",
-		"Search for columns by name across all tables in the database or within a specific schema/table. Supports both exact and partial matching. Returns table names, schemas, column names, data types, and positions. Use this to locate specific columns in large schemas or find all occurrences of a column name pattern.",
+		"Search columns by name across tables. Supports exact/partial match. Returns table, schema, column, type, position. For locating columns in large schemas.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input FindColumnInput) (*mcp.CallToolResult, FindColumnOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {

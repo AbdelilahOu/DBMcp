@@ -16,7 +16,7 @@ import (
 type GetDBInfoInput struct{}
 
 type GetDBInfoOutput struct {
-	DatabaseName string   `json:"database_name" jsonschema_description:"Name of the database"`
+	DatabaseName string   `json:"db" jsonschema_description:"Name of the database"`
 	Version      string   `json:"version" jsonschema_description:"Database version"`
 	Schemas      []string `json:"schemas" jsonschema_description:"Available schemas"`
 	TableCount   int      `json:"table_count" jsonschema_description:"Total number of tables"`
@@ -25,7 +25,7 @@ type GetDBInfoOutput struct {
 func GetDbInfoTool() *ToolDefinition[GetDBInfoInput, GetDBInfoOutput] {
 	return NewToolDefinition[GetDBInfoInput, GetDBInfoOutput](
 		"get_db_info",
-		"Get high-level database overview including database name, version, available schemas, and total table count. Use this as the starting point when exploring an unfamiliar database or when asked general questions about the database. For specific table information use list_tables, describe_table, or analyze_table instead.",
+		"Get DB overview: name, version, schemas, table count. Entry point for unfamiliar DBs. Use list_tables/describe_table/analyze_table for table details.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetDBInfoInput) (*mcp.CallToolResult, GetDBInfoOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {

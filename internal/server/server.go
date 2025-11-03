@@ -40,6 +40,7 @@ func NewMCPServer(cfg MCPServerConfig) (*mcp.Server, error) {
 		"version": cfg.Version,
 	})
 
+	var dbType string
 	if cfg.InitialConnection != "" {
 		conn, exists := cfg.Config.GetConnection(cfg.InitialConnection)
 		if !exists {
@@ -61,9 +62,10 @@ func NewMCPServer(cfg MCPServerConfig) (*mcp.Server, error) {
 			"type":       conn.Type,
 		})
 		fmt.Printf("Successfully initialized connection: %s\n", cfg.InitialConnection)
+		dbType = conn.Type
 	}
 
-	tools.RegisterTools(server, cfg.Config)
+	tools.RegisterTools(server, cfg.Config, dbType)
 
 	return server, nil
 }

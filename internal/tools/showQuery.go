@@ -13,18 +13,18 @@ import (
 )
 
 type ShowQueryInput struct {
-	Query string `json:"query" jsonschema:"required" jsonschema_description:"SHOW SQL query to execute (e.g., SHOW TABLES, SHOW DATABASES, SHOW COLUMNS, etc.)"`
+	Query string `json:"q" jsonschema:"required" jsonschema_description:"SHOW SQL query to execute (e.g., SHOW TABLES, SHOW DATABASES, SHOW COLUMNS, etc.)"`
 }
 
 type ShowQueryOutput struct {
 	Data    []map[string]interface{} `json:"data" jsonschema_description:"Query results"`
-	Message string                   `json:"message" jsonschema_description:"Success message"`
+	Message string                   `json:"msg" jsonschema_description:"Success message"`
 }
 
 func GetShowQueryTool() *ToolDefinition[ShowQueryInput, ShowQueryOutput] {
 	return NewToolDefinition[ShowQueryInput, ShowQueryOutput](
 		"show_query",
-		"Execute SHOW commands for database settings and metadata (MySQL: SHOW TABLES, SHOW DATABASES, SHOW COLUMNS; PostgreSQL: SHOW server_version, SHOW search_path, etc.). Use this when you need raw SHOW command output or database configuration settings. For database-agnostic metadata operations, prefer list_tables, describe_table, or get_db_info instead.",
+		"Execute SHOW commands. MySQL: SHOW TABLES/DATABASES/COLUMNS. PostgreSQL: SHOW server_version/search_path. For DB-agnostic ops prefer list_tables/describe_table/get_db_info.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ShowQueryInput) (*mcp.CallToolResult, ShowQueryOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {

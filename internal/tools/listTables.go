@@ -14,23 +14,23 @@ import (
 )
 
 type ListTablesInput struct {
-	Schema string `json:"schema,omitempty" jsonschema_description:"Optional schema name to filter tables (defaults to 'public' for PostgreSQL)"`
+	Schema string `json:"sch,omitempty" jsonschema_description:"Optional schema name to filter tables (defaults to 'public' for PostgreSQL)"`
 }
 
 type TableInfo struct {
 	Name   string `json:"name" jsonschema_description:"Table name"`
-	Schema string `json:"schema" jsonschema_description:"Schema name"`
-	Type   string `json:"type" jsonschema_description:"Table type (table, view, etc.)"`
+	Schema string `json:"sch" jsonschema_description:"Schema name"`
+	Type   string `json:"type,omitempty" jsonschema_description:"Table type (table, view, etc.)"`
 }
 
 type ListTablesOutput struct {
-	Tables []TableInfo `json:"tables" jsonschema_description:"Array of table information"`
+	Tables []TableInfo `json:"tbls" jsonschema_description:"Array of table information"`
 }
 
 func GetListTablesTool() *ToolDefinition[ListTablesInput, ListTablesOutput] {
 	return NewToolDefinition[ListTablesInput, ListTablesOutput](
 		"list_tables",
-		"Get a list of all tables and views in the database or a specific schema. Returns table names, schemas, and types (table/view). Use this when you need to discover what tables exist or find a specific table name. For detailed information about a specific table use describe_table or analyze_table.",
+		"List all tables/views in DB or schema. Returns names, schemas, types. Use describe_table/analyze_table for details.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListTablesInput) (*mcp.CallToolResult, ListTablesOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {

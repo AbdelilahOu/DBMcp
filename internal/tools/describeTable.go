@@ -14,34 +14,34 @@ import (
 )
 
 type DescribeTableInput struct {
-	TableName string `json:"table_name" jsonschema:"required" jsonschema_description:"Name of the table to describe"`
-	Schema    string `json:"schema,omitempty" jsonschema_description:"Optional schema name (defaults to 'public' for PostgreSQL)"`
+	TableName string `json:"tbl" jsonschema:"required" jsonschema_description:"Name of the table to describe"`
+	Schema    string `json:"sch,omitempty" jsonschema_description:"Optional schema name (defaults to 'public' for PostgreSQL)"`
 }
 
 type ColumnInfo struct {
-	Name          string `json:"name" jsonschema_description:"Column name"`
-	DataType      string `json:"data_type" jsonschema_description:"Data type of the column"`
-	IsNullable    bool   `json:"is_nullable" jsonschema_description:"Whether the column can contain NULL values"`
-	IsPrimaryKey  bool   `json:"is_primary_key" jsonschema_description:"Whether the column is part of the primary key"`
-	DefaultValue  string `json:"default_value,omitempty" jsonschema_description:"Default value for the column"`
-	CharMaxLength *int   `json:"char_max_length,omitempty" jsonschema_description:"Maximum length for character types"`
+	Name          string `json:"col" jsonschema_description:"Column name"`
+	DataType      string `json:"dtype" jsonschema_description:"Data type of the column"`
+	IsNullable    bool   `json:"null,omitempty" jsonschema_description:"Whether the column can contain NULL values"`
+	IsPrimaryKey  bool   `json:"pk,omitempty" jsonschema_description:"Whether the column is part of the primary key"`
+	DefaultValue  string `json:"def,omitempty" jsonschema_description:"Default value for the column"`
+	CharMaxLength *int   `json:"maxlen,omitempty" jsonschema_description:"Maximum length for character types"`
 }
 
 type IndexInfo struct {
 	Name     string   `json:"name" jsonschema_description:"Index name"`
-	Columns  []string `json:"columns" jsonschema_description:"Columns included in the index"`
-	IsUnique bool     `json:"is_unique" jsonschema_description:"Whether the index is unique"`
+	Columns  []string `json:"cols" jsonschema_description:"Columns included in the index"`
+	IsUnique bool     `json:"uniq,omitempty" jsonschema_description:"Whether the index is unique"`
 }
 
 type DescribeTableOutput struct {
-	Columns []ColumnInfo `json:"columns" jsonschema_description:"Array of column information"`
-	Indexes []IndexInfo  `json:"indexes" jsonschema_description:"Array of index information"`
+	Columns []ColumnInfo `json:"cols" jsonschema_description:"Array of column information"`
+	Indexes []IndexInfo  `json:"idxs,omitempty" jsonschema_description:"Array of index information"`
 }
 
 func GetDescribeTableTool() *ToolDefinition[DescribeTableInput, DescribeTableOutput] {
 	return NewToolDefinition[DescribeTableInput, DescribeTableOutput](
 		"describe_table",
-		"Get detailed schema information about a table's structure including column definitions (names, data types, nullability, primary keys, default values) and indexes. Use this when you need to understand the table's schema design, not for getting data or statistics. For row counts and sizes use analyze_table instead.",
+		"Get table schema: columns (names, types, nullability, PKs, defaults), indexes. For schema design, not data/stats. Use analyze_table for row counts/sizes.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input DescribeTableInput) (*mcp.CallToolResult, DescribeTableOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {

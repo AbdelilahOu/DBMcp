@@ -13,18 +13,18 @@ import (
 )
 
 type ExecuteQueryInput struct {
-	Query string `json:"query" jsonschema:"required" jsonschema_description:"SQL query to execute (INSERT, UPDATE, DELETE, etc.)"`
+	Query string `json:"q" jsonschema:"required" jsonschema_description:"SQL query to execute (INSERT, UPDATE, DELETE, etc.)"`
 }
 
 type ExecuteQueryOutput struct {
-	RowsAffected int64  `json:"rows_affected" jsonschema_description:"Number of rows affected by the query"`
-	Message      string `json:"message" jsonschema_description:"Success message"`
+	RowsAffected int64  `json:"rows,omitempty" jsonschema_description:"Number of rows affected by the query"`
+	Message      string `json:"msg" jsonschema_description:"Success message"`
 }
 
 func GetExecuteQueryTool() *ToolDefinition[ExecuteQueryInput, ExecuteQueryOutput] {
 	return NewToolDefinition[ExecuteQueryInput, ExecuteQueryOutput](
 		"execute_query",
-		"Execute data modification queries (INSERT, UPDATE, DELETE) and DDL statements (CREATE, ALTER, DROP). This tool changes database state and should only be used when you need to modify data or schema. DO NOT use for reading data (use select_query) or getting metadata (use describe_table, analyze_table, or list_tables).",
+		"Execute INSERT, UPDATE, DELETE, CREATE, ALTER, DROP. Changes DB state. DO NOT use for reading (select_query) or metadata (describe_table, analyze_table, list_tables).",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ExecuteQueryInput) (*mcp.CallToolResult, ExecuteQueryOutput, error) {
 			sessionState, err := state.GetActiveSession("default")
 			if err != nil {
@@ -74,9 +74,9 @@ func GetExecuteQueryTool() *ToolDefinition[ExecuteQueryInput, ExecuteQueryOutput
 
 			logger.LogDatabaseOperation(operation, input.Query, rowsAffected, nil)
 
-			message := fmt.Sprintf("%s operation completed successfully", operation)
+			message := fmt.Sprintf("%s OK", operation)
 			if rowsAffected > 0 {
-				message = fmt.Sprintf("%s operation completed successfully (%d rows affected)", operation, rowsAffected)
+				message = fmt.Sprintf("%s OK (%d rows)", operation, rowsAffected)
 			}
 
 			output := ExecuteQueryOutput{

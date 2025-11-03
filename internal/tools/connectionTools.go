@@ -19,7 +19,7 @@ type ConnectionInfo struct {
 	Name        string `json:"name" jsonschema_description:"Connection name"`
 	DisplayName string `json:"display_name" jsonschema_description:"Human-readable connection name"`
 	Type        string `json:"type" jsonschema_description:"Database type (postgres, mysql)"`
-	Description string `json:"description" jsonschema_description:"Connection description"`
+	Description string `json:"description,omitempty" jsonschema_description:"Connection description"`
 }
 
 type ListConnectionsOutput struct {
@@ -71,14 +71,13 @@ type SwitchConnectionInput struct {
 }
 
 type SwitchConnectionOutput struct {
-	Message    string `json:"message" jsonschema_description:"Success message"`
-	Connection string `json:"connection" jsonschema_description:"Active connection name"`
+	Status string `json:"status" jsonschema_description:"Success message"`
 }
 
 func GetSwitchConnectionTool(cfg *config.Config) *ToolDefinition[SwitchConnectionInput, SwitchConnectionOutput] {
 	return NewToolDefinition[SwitchConnectionInput, SwitchConnectionOutput](
 		"switch_connection",
-		"Switch to a different database connection during the session.",
+		"Switch to different DB connection in session.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input SwitchConnectionInput) (*mcp.CallToolResult, SwitchConnectionOutput, error) {
 			if cfg == nil {
 				return nil, SwitchConnectionOutput{}, fmt.Errorf("config not loaded - server must be started with a valid config file")
@@ -123,8 +122,7 @@ func GetSwitchConnectionTool(cfg *config.Config) *ToolDefinition[SwitchConnectio
 			logger.LogConnectionEvent("switch_connection", input.Connection, conn.Type, nil)
 
 			output := SwitchConnectionOutput{
-				Message:    fmt.Sprintf("Successfully switched to connection '%s'", input.Connection),
-				Connection: input.Connection,
+				Status: fmt.Sprintf("Successfully switched to connection '%s'", input.Connection),
 			}
 
 			jsonBytes, err := json.Marshal(output)
@@ -147,14 +145,14 @@ type TestConnectionInput struct {
 
 type TestConnectionOutput struct {
 	Success    bool   `json:"success" jsonschema_description:"Whether the connection test succeeded"`
-	Message    string `json:"message" jsonschema_description:"Test result message"`
+	Message    string `json:"msg" jsonschema_description:"Test result message"`
 	Connection string `json:"connection" jsonschema_description:"Connection that was tested"`
 }
 
 func GetTestConnectionTool(cfg *config.Config) *ToolDefinition[TestConnectionInput, TestConnectionOutput] {
 	return NewToolDefinition[TestConnectionInput, TestConnectionOutput](
 		"test_connection",
-		"Test database connectivity. If a connection name is provided, tests that specific connection. If not provided, tests the current active connection in the session state.",
+		"Test DB connectivity. Tests specific connection if name provided, else current active connection.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input TestConnectionInput) (*mcp.CallToolResult, TestConnectionOutput, error) {
 			var connectionName string
 			var testClient *client.DBClient
