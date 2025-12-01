@@ -21,6 +21,24 @@ This MCP server bridges the gap between AI assistants and database systems, allo
 - **Flexible Connection Management** - Named connections with easy switching
 - **AI-Optimized** - Designed specifically for AI assistant workflows
 
+## Tool Loading Modes
+
+Use `settings.advanced` in `connections.json` to control how many tools are registered:
+
+- `true` (default): load every tool listed below.
+- `false`: load only the core set most projects need — `list_connections`, `switch_connection`, `test_connection`, `get_db_info`, `list_tables`, `describe_table` (columns/indexes), `select_query`, and `execute_query`.
+
+Example settings block:
+
+```json
+"settings": {
+  "query_timeout": "30s",
+  "max_connections": 10,
+  "connection_lifetime": "5m",
+  "advanced": false
+}
+```
+
 ## Available Tools
 
 The server provides comprehensive database interaction capabilities through **28 specialized tools**:

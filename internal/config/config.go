@@ -20,9 +20,17 @@ type LoggingConfig struct {
 	Console    bool   `json:"console"`
 }
 
+type Settings struct {
+	QueryTimeout       string `json:"query_timeout"`
+	MaxConnections     int    `json:"max_connections"`
+	ConnectionLifetime string `json:"connection_lifetime"`
+	AdvancedTools      *bool  `json:"advanced"`
+}
+
 type Config struct {
 	Connections       map[string]Connection `json:"connections"`
 	DefaultConnection string                `json:"default_connection"`
+	Settings          Settings              `json:"settings"`
 	Logging           LoggingConfig         `json:"logging"`
 }
 
@@ -42,6 +50,18 @@ func (c *Config) GetConnection(name string) (Connection, bool) {
 
 func (c *Config) ListConnections() map[string]Connection {
 	return c.Connections
+}
+
+func (c *Config) AdvancedToolsEnabled() bool {
+	if c == nil {
+		return true
+	}
+
+	if c.Settings.AdvancedTools == nil {
+		return true
+	}
+
+	return *c.Settings.AdvancedTools
 }
 
 func (c *Config) ValidateConnection(conn Connection) error {
@@ -83,6 +103,20 @@ func loadConfigFromFile(path string) (*Config, error) {
 
 	if config.Logging.OutputFile != "" {
 		config.Logging.Console = true
+	}
+
+	if config.Settings.QueryTimeout == "" {
+		config.Settings.QueryTimeout = "30s"
+	}
+	if config.Settings.MaxConnections == 0 {
+		config.Settings.MaxConnections = 10
+	}
+	if config.Settings.ConnectionLifetime == "" {
+		config.Settings.ConnectionLifetime = "5m"
+	}
+	if config.Settings.AdvancedTools == nil {
+		defaultAdvanced := true
+		config.Settings.AdvancedTools = &defaultAdvanced
 	}
 
 	for name, conn := range config.Connections {
