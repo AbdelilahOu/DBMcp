@@ -90,7 +90,7 @@ func NewLogger(cfg Config) (*Logger, error) {
 	var writers []io.Writer
 
 	if cfg.Console {
-		writers = append(writers, os.Stdout)
+		writers = append(writers, os.Stderr)
 	}
 
 	if cfg.OutputFile != "" {
@@ -116,6 +116,8 @@ func NewLogger(cfg Config) (*Logger, error) {
 	var writer io.Writer
 	if len(writers) == 1 {
 		writer = writers[0]
+	} else if len(writers) == 0 {
+		writer = io.Discard
 	} else {
 		writer = io.MultiWriter(writers...)
 	}

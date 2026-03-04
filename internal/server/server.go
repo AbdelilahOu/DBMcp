@@ -22,9 +22,15 @@ type MCPServerConfig struct {
 }
 
 func NewMCPServer(cfg MCPServerConfig) (*mcp.Server, error) {
+	if cfg.Config == nil {
+		cfg.Config = &config.Config{
+			Connections: make(map[string]config.Connection),
+		}
+	}
+
 	logCfg := logger.ConfigFromLoggingConfig(cfg.Config.Logging)
 	if err := logger.Initialize(logCfg); err != nil {
-		fmt.Printf("Warning: Failed to initialize logger: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Warning: Failed to initialize logger: %v\n", err)
 	} else {
 		logger.Info("Logger initialized successfully", map[string]interface{}{
 			"level":       logger.LogLevelString(logCfg.Level),
@@ -61,7 +67,7 @@ func NewMCPServer(cfg MCPServerConfig) (*mcp.Server, error) {
 			"connection": cfg.InitialConnection,
 			"type":       conn.Type,
 		})
-		fmt.Printf("Successfully initialized connection: %s\n", cfg.InitialConnection)
+		fmt.Fprintf(os.Stderr, "Successfully initialized connection: %s\n", cfg.InitialConnection)
 		dbType = conn.Type
 	}
 
@@ -119,7 +125,7 @@ func RunStdioServer(cfg StdioServerConfig) error {
 
 	defer func() {
 		if err := logger.Shutdown(); err != nil {
-			fmt.Printf("Error shutting down logger: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error shutting down logger: %v\n", err)
 		}
 	}()
 
@@ -137,7 +143,7 @@ func RunStdioServer(cfg StdioServerConfig) error {
 	logger.Info("DB MCP Server started and running", map[string]interface{}{
 		"version": cfg.Version,
 	})
-	fmt.Printf("DB MCP Server running ...\n")
+	fmt.Fprintln(os.Stderr, "DB MCP Server running ...")
 
 	err = server.Run(ctx, &mcp.StdioTransport{})
 	if err != nil {

@@ -42,25 +42,25 @@ func runStdioServer(cmd *cobra.Command, args []string) error {
 
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
-		fmt.Printf("Warning: Failed to load config: %v\n", err)
-		fmt.Println("Server will start without connections. Use list_connections and switch_connection tools.")
+		fmt.Fprintf(os.Stderr, "Warning: Failed to load config: %v\n", err)
+		fmt.Fprintln(os.Stderr, "Server will start without connections. Use list_connections and switch_connection tools.")
 	} else {
 		if connection != "" {
 			if _, exists := cfg.GetConnection(connection); exists {
-				fmt.Printf("Config loaded. Will initialize connection: %s\n", connection)
+				fmt.Fprintf(os.Stderr, "Config loaded. Will initialize connection: %s\n", connection)
 				initialConnection = connection
 			} else {
 				return fmt.Errorf("connection '%s' not found in config", connection)
 			}
 		} else if cfg.DefaultConnection != "" {
 			if _, exists := cfg.GetConnection(cfg.DefaultConnection); exists {
-				fmt.Printf("Config loaded. Will initialize default connection: %s\n", cfg.DefaultConnection)
+				fmt.Fprintf(os.Stderr, "Config loaded. Will initialize default connection: %s\n", cfg.DefaultConnection)
 				initialConnection = cfg.DefaultConnection
 			} else {
-				fmt.Printf("Config loaded. Default connection '%s' not found, starting without initial connection.\n", cfg.DefaultConnection)
+				fmt.Fprintf(os.Stderr, "Config loaded. Default connection '%s' not found, starting without initial connection.\n", cfg.DefaultConnection)
 			}
 		} else {
-			fmt.Println("Config loaded. Use list_connections and switch_connection tools to connect to a database.")
+			fmt.Fprintln(os.Stderr, "Config loaded. Use list_connections and switch_connection tools to connect to a database.")
 		}
 	}
 

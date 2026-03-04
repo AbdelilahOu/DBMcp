@@ -101,10 +101,6 @@ func loadConfigFromFile(path string) (*Config, error) {
 		config.Logging.MaxSizeMB = 10
 	}
 
-	if config.Logging.OutputFile != "" {
-		config.Logging.Console = true
-	}
-
 	if config.Settings.QueryTimeout == "" {
 		config.Settings.QueryTimeout = "30s"
 	}
