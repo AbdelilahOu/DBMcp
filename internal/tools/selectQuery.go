@@ -32,7 +32,7 @@ func GetSelectQueryTool() *ToolDefinition[SelectQueryInput, SelectQueryOutput] {
 			}
 
 			queryLower := strings.ToLower(strings.TrimSpace(input.Query))
-			if !strings.HasPrefix(queryLower, "select") || !strings.HasPrefix(queryLower, "with") {
+			if !strings.HasPrefix(queryLower, "select") && !strings.HasPrefix(queryLower, "with") {
 				return nil, SelectQueryOutput{}, fmt.Errorf("only SELECT queries are allowed")
 			}
 
