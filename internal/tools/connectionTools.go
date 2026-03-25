@@ -2,8 +2,9 @@ package tools
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/AbdelilahOu/DBMcp/internal/client"
 	"github.com/AbdelilahOu/DBMcp/internal/config"
@@ -52,14 +53,28 @@ func GetListConnectionsTool(cfg *config.Config) *ToolDefinition[ListConnectionsI
 				DefaultConnection: cfg.DefaultConnection,
 			}
 
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, ListConnectionsOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+			sort.Slice(connections, func(i, j int) bool {
+				return connections[i].Name < connections[j].Name
+			})
+
+			lines := []string{fmt.Sprintf("Available connections: %d", len(connections))}
+			for _, c := range connections {
+				description := strings.TrimSpace(c.Description)
+				if description == "" {
+					description = "no description"
+				}
+
+				line := fmt.Sprintf("- %s: %s (driver: %s)", c.Name, description, c.Type)
+				if c.Name == output.DefaultConnection {
+					line += " [default]"
+				}
+				lines = append(lines, line)
 			}
+			msg := strings.Join(lines, "\n")
 
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
+					&mcp.TextContent{Text: msg},
 				},
 			}, output, nil
 		},
@@ -127,14 +142,9 @@ func GetSwitchConnectionTool(cfg *config.Config) *ToolDefinition[SwitchConnectio
 				Status: fmt.Sprintf("Successfully switched to connection '%s'", input.Connection),
 			}
 
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, SwitchConnectionOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-			}
-
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
+					&mcp.TextContent{Text: output.Status},
 				},
 			}, output, nil
 		},
@@ -179,10 +189,9 @@ func GetTestConnectionTool(cfg *config.Config) *ToolDefinition[TestConnectionInp
 						Connection: input.Connection,
 					}
 
-					jsonBytes, _ := json.Marshal(output)
 					return &mcp.CallToolResult{
 						Content: []mcp.Content{
-							&mcp.TextContent{Text: string(jsonBytes)},
+							&mcp.TextContent{Text: output.Message},
 						},
 					}, output, nil
 				}
@@ -198,10 +207,9 @@ func GetTestConnectionTool(cfg *config.Config) *ToolDefinition[TestConnectionInp
 						Connection: "current",
 					}
 
-					jsonBytes, _ := json.Marshal(output)
 					return &mcp.CallToolResult{
 						Content: []mcp.Content{
-							&mcp.TextContent{Text: string(jsonBytes)},
+							&mcp.TextContent{Text: output.Message},
 						},
 					}, output, nil
 				}
@@ -214,10 +222,9 @@ func GetTestConnectionTool(cfg *config.Config) *ToolDefinition[TestConnectionInp
 						Connection: "current",
 					}
 
-					jsonBytes, _ := json.Marshal(output)
 					return &mcp.CallToolResult{
 						Content: []mcp.Content{
-							&mcp.TextContent{Text: string(jsonBytes)},
+							&mcp.TextContent{Text: output.Message},
 						},
 					}, output, nil
 				}
@@ -233,14 +240,9 @@ func GetTestConnectionTool(cfg *config.Config) *ToolDefinition[TestConnectionInp
 				Connection: connectionName,
 			}
 
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, TestConnectionOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-			}
-
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
+					&mcp.TextContent{Text: fmt.Sprintf("%s (%s)", output.Message, output.Connection)},
 				},
 			}, output, nil
 		},
