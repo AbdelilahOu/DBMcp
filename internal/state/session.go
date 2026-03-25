@@ -23,28 +23,42 @@ var (
 func GetSession(sessionID string) *DBSessionState {
 	mu.RLock()
 	defer mu.RUnlock()
-	return sessions[sessionID]
+	s, ok := sessions[sessionID]
+	if !ok || s == nil {
+		return nil
+	}
+
+	sessionCopy := *s
+	return &sessionCopy
 }
 
 func CreateSession(sessionID string, globalClient *client.DBClient) *DBSessionState {
-	mu.Lock()
-	defer mu.Unlock()
+	id := sessionID
+	if id == "" {
+		id = uuid.New().String()
+	}
 
+	nextState := &DBSessionState{
+		CurrentSchema: "public",
+	}
 	if globalClient == nil {
-		id := sessionID
-		if id == "" {
-			id = uuid.New().String()
-		}
-		s := &DBSessionState{
-			Conn:          nil,
-			CurrentSchema: "public",
-		}
-		sessions[id] = s
-		return s
+		return SetSession(id, nextState)
 	}
 
 	conn := globalClient.DB
+	if conn == nil {
+		return nil
+	}
 	if err := conn.Ping(); err != nil {
+		return nil
+	}
+
+	nextState.Conn = conn
+	return SetSession(id, nextState)
+}
+
+func SetSession(sessionID string, nextState *DBSessionState) *DBSessionState {
+	if nextState == nil {
 		return nil
 	}
 
@@ -52,12 +66,19 @@ func CreateSession(sessionID string, globalClient *client.DBClient) *DBSessionSt
 	if id == "" {
 		id = uuid.New().String()
 	}
-	s := &DBSessionState{
-		Conn:          conn,
-		CurrentSchema: "public",
+
+	mu.Lock()
+	oldState := sessions[id]
+
+	stateCopy := *nextState
+	sessions[id] = &stateCopy
+	mu.Unlock()
+
+	if oldState != nil && oldState.Conn != nil && oldState.Conn != stateCopy.Conn {
+		_ = oldState.Conn.Close()
 	}
-	sessions[id] = s
-	return s
+
+	return &stateCopy
 }
 
 func GetActiveSession(sessionID string) (*DBSessionState, error) {
@@ -79,10 +100,33 @@ func GetActiveSession(sessionID string) (*DBSessionState, error) {
 
 func CloseSession(sessionID string) {
 	mu.Lock()
-	defer mu.Unlock()
-	if s, ok := sessions[sessionID]; ok {
-		s.Conn.Close()
+	s, ok := sessions[sessionID]
+	if ok {
 		delete(sessions, sessionID)
+	}
+	mu.Unlock()
+
+	if ok && s != nil && s.Conn != nil {
+		_ = s.Conn.Close()
+	}
+}
+
+func CloseAllSessions() {
+	mu.Lock()
+	currentSessions := sessions
+	sessions = make(map[string]*DBSessionState)
+	mu.Unlock()
+
+	closed := make(map[*sql.DB]struct{})
+	for _, s := range currentSessions {
+		if s == nil || s.Conn == nil {
+			continue
+		}
+		if _, exists := closed[s.Conn]; exists {
+			continue
+		}
+		closed[s.Conn] = struct{}{}
+		_ = s.Conn.Close()
 	}
 }
 

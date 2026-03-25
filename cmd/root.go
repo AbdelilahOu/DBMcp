@@ -42,26 +42,29 @@ func runStdioServer(cmd *cobra.Command, args []string) error {
 
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: Failed to load config: %v\n", err)
-		fmt.Fprintln(os.Stderr, "Server will start without connections. Use list_connections and switch_connection tools.")
-	} else {
-		if connection != "" {
-			if _, exists := cfg.GetConnection(connection); exists {
-				fmt.Fprintf(os.Stderr, "Config loaded. Will initialize connection: %s\n", connection)
-				initialConnection = connection
-			} else {
-				return fmt.Errorf("connection '%s' not found in config", connection)
-			}
-		} else if cfg.DefaultConnection != "" {
-			if _, exists := cfg.GetConnection(cfg.DefaultConnection); exists {
-				fmt.Fprintf(os.Stderr, "Config loaded. Will initialize default connection: %s\n", cfg.DefaultConnection)
-				initialConnection = cfg.DefaultConnection
-			} else {
-				fmt.Fprintf(os.Stderr, "Config loaded. Default connection '%s' not found, starting without initial connection.\n", cfg.DefaultConnection)
-			}
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	if len(cfg.Connections) == 0 {
+		return fmt.Errorf("config loaded but contains no connections")
+	}
+
+	if connection != "" {
+		if _, exists := cfg.GetConnection(connection); exists {
+			fmt.Fprintf(os.Stderr, "Config loaded. Will initialize connection: %s\n", connection)
+			initialConnection = connection
 		} else {
-			fmt.Fprintln(os.Stderr, "Config loaded. Use list_connections and switch_connection tools to connect to a database.")
+			return fmt.Errorf("connection '%s' not found in config", connection)
 		}
+	} else if cfg.DefaultConnection != "" {
+		if _, exists := cfg.GetConnection(cfg.DefaultConnection); exists {
+			fmt.Fprintf(os.Stderr, "Config loaded. Will initialize default connection: %s\n", cfg.DefaultConnection)
+			initialConnection = cfg.DefaultConnection
+		} else {
+			fmt.Fprintf(os.Stderr, "Config loaded. Default connection '%s' not found, starting without initial connection.\n", cfg.DefaultConnection)
+		}
+	} else {
+		fmt.Fprintln(os.Stderr, "Config loaded. Use list_connections and switch_connection tools to connect to a database.")
 	}
 
 	return server.RunStdioServer(server.StdioServerConfig{

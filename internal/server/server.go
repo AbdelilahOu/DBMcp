@@ -89,18 +89,7 @@ func initializeConnection(conn config.Connection, connectionName string) error {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	sessionID := "default"
-	sessionState := state.CreateSession(sessionID, dbClient)
-	if sessionState == nil {
-		err := fmt.Errorf("failed to create session")
-		logger.LogConnectionEvent("initialize_connection", connectionName, conn.Type, err)
-		return err
-	}
-
-	sessionState.Conn = dbClient.DB
-	sessionState.DBType = conn.Type
-
-	var currentSchema string
+	currentSchema := "public"
 	if conn.Type == "postgres" {
 		err = dbClient.DB.QueryRow("SELECT current_schema()").Scan(&currentSchema)
 		if err != nil {
@@ -109,11 +98,24 @@ func initializeConnection(conn config.Connection, connectionName string) error {
 	} else if conn.Type == "mysql" {
 		err = dbClient.DB.QueryRow("SELECT DATABASE()").Scan(&currentSchema)
 		if err != nil {
+			_ = dbClient.Close()
 			logger.LogConnectionEvent("initialize_connection", connectionName, conn.Type, fmt.Errorf("failed to get current database: %v", err))
 			return fmt.Errorf("failed to get current database: %w", err)
 		}
 	}
-	sessionState.CurrentSchema = currentSchema
+
+	sessionID := "default"
+	sessionState := state.SetSession(sessionID, &state.DBSessionState{
+		Conn:          dbClient.DB,
+		CurrentSchema: currentSchema,
+		DBType:        conn.Type,
+	})
+	if sessionState == nil {
+		_ = dbClient.Close()
+		err := fmt.Errorf("failed to create session")
+		logger.LogConnectionEvent("initialize_connection", connectionName, conn.Type, err)
+		return err
+	}
 
 	logger.LogConnectionEvent("initialize_connection", connectionName, conn.Type, nil)
 	return nil
@@ -122,6 +124,8 @@ func initializeConnection(conn config.Connection, connectionName string) error {
 func RunStdioServer(cfg StdioServerConfig) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	defer state.CloseAllSessions()
 
 	defer func() {
 		if err := logger.Shutdown(); err != nil {

@@ -94,17 +94,7 @@ func GetSwitchConnectionTool(cfg *config.Config) *ToolDefinition[SwitchConnectio
 				return nil, SwitchConnectionOutput{}, fmt.Errorf("failed to connect to '%s': %v", input.Connection, err)
 			}
 
-			sessionID := "default"
-			sessionState := state.CreateSession(sessionID, dbClient)
-			if sessionState == nil {
-				logger.LogConnectionEvent("switch_connection", input.Connection, conn.Type, fmt.Errorf("failed to create session"))
-				return nil, SwitchConnectionOutput{}, fmt.Errorf("failed to create session")
-			}
-
-			sessionState.Conn = dbClient.DB
-			sessionState.DBType = conn.Type
-
-			var currentSchema string
+			currentSchema := "public"
 			if conn.Type == "postgres" {
 				err = dbClient.DB.QueryRow("SELECT current_schema()").Scan(&currentSchema)
 				if err != nil {
@@ -113,11 +103,23 @@ func GetSwitchConnectionTool(cfg *config.Config) *ToolDefinition[SwitchConnectio
 			} else if conn.Type == "mysql" {
 				err = dbClient.DB.QueryRow("SELECT DATABASE()").Scan(&currentSchema)
 				if err != nil {
+					_ = dbClient.Close()
 					logger.LogConnectionEvent("switch_connection", input.Connection, conn.Type, fmt.Errorf("failed to get current database: %v", err))
 					return nil, SwitchConnectionOutput{}, fmt.Errorf("failed to get current database: %v", err)
 				}
 			}
-			sessionState.CurrentSchema = currentSchema
+
+			sessionID := "default"
+			sessionState := state.SetSession(sessionID, &state.DBSessionState{
+				Conn:          dbClient.DB,
+				CurrentSchema: currentSchema,
+				DBType:        conn.Type,
+			})
+			if sessionState == nil {
+				_ = dbClient.Close()
+				logger.LogConnectionEvent("switch_connection", input.Connection, conn.Type, fmt.Errorf("failed to create session"))
+				return nil, SwitchConnectionOutput{}, fmt.Errorf("failed to create session")
+			}
 
 			logger.LogConnectionEvent("switch_connection", input.Connection, conn.Type, nil)
 
