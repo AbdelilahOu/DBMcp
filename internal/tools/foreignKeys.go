@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -94,17 +93,12 @@ func GetListForeignKeysTool() *ToolDefinition[ListForeignKeysInput, ListForeignK
 			logger.LogDatabaseOperation("LIST_FOREIGN_KEYS", "list foreign keys", int64(len(foreignKeys)), nil)
 
 			output := ListForeignKeysOutput{ForeignKeys: foreignKeys}
-
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, ListForeignKeysOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+			message := fmt.Sprintf("Found %d foreign %s", len(foreignKeys), pluralize(len(foreignKeys), "key", "keys"))
+			if input.TableName != "" {
+				message += fmt.Sprintf(" for %s", qualifiedName(schema, input.TableName))
 			}
 
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }
@@ -152,17 +146,14 @@ func GetTableRelationshipsTool() *ToolDefinition[GetTableRelationshipsInput, Get
 				TableSchema:   schema,
 				Relationships: relationships,
 			}
+			message := fmt.Sprintf(
+				"Found %d %s for %s",
+				len(relationships),
+				pluralize(len(relationships), "relationship", "relationships"),
+				qualifiedName(schema, input.TableName),
+			)
 
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, GetTableRelationshipsOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-			}
-
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }

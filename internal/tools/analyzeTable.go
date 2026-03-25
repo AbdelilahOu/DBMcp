@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -65,17 +64,15 @@ func GetAnalyzeTableTool() *ToolDefinition[AnalyzeTableInput, AnalyzeTableOutput
 			output := AnalyzeTableOutput{
 				Stats: *stats,
 			}
+			message := fmt.Sprintf(
+				"Stats for %s: %d rows, table size %s, total size %s",
+				qualifiedName(schema, input.TableName),
+				output.Stats.RowCount,
+				output.Stats.TableSize,
+				output.Stats.TotalSize,
+			)
 
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, AnalyzeTableOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-			}
-
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }

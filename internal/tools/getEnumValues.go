@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -90,17 +89,14 @@ func GetEnumValuesTool() *ToolDefinition[GetEnumValuesInput, GetEnumValuesOutput
 				Schema:   schema,
 				Values:   values,
 			}
+			message := fmt.Sprintf(
+				"Enum %s has %d %s",
+				qualifiedName(output.Schema, output.EnumName),
+				len(values),
+				pluralize(len(values), "value", "values"),
+			)
 
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, GetEnumValuesOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-			}
-
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }
@@ -201,17 +197,12 @@ func GetListEnumsTool() *ToolDefinition[ListEnumsInput, ListEnumsOutput] {
 			logger.LogDatabaseOperation("LIST_ENUMS", query, int64(len(enums)), nil)
 
 			output := ListEnumsOutput{Enums: enums}
-
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, ListEnumsOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+			message := fmt.Sprintf("Found %d %s", len(enums), pluralize(len(enums), "enum", "enums"))
+			if input.Schema != "" {
+				message += fmt.Sprintf(" in schema '%s'", schema)
 			}
 
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }

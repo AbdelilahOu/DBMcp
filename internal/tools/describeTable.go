@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -78,17 +77,16 @@ func GetDescribeTableTool() *ToolDefinition[DescribeTableInput, DescribeTableOut
 				Columns: columns,
 				Indexes: indexes,
 			}
+			message := fmt.Sprintf(
+				"Schema for %s: %d %s, %d %s",
+				qualifiedName(schema, input.TableName),
+				len(columns),
+				pluralize(len(columns), "column", "columns"),
+				len(indexes),
+				pluralize(len(indexes), "index", "indexes"),
+			)
 
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, DescribeTableOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-			}
-
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }

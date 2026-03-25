@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -144,17 +143,12 @@ func GetListViewsTool() *ToolDefinition[ListViewsInput, ListViewsOutput] {
 			logger.LogDatabaseOperation("LIST_VIEWS", query, int64(len(views)), nil)
 
 			output := ListViewsOutput{Views: views}
-
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, ListViewsOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+			message := fmt.Sprintf("Found %d %s", len(views), pluralize(len(views), "view", "views"))
+			if input.Schema != "" {
+				message += fmt.Sprintf(" in schema '%s'", schema)
 			}
 
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }
@@ -212,17 +206,9 @@ func GetViewDefinitionTool() *ToolDefinition[GetViewDefinitionInput, GetViewDefi
 				Schema:     schema,
 				Definition: definition,
 			}
+			message := fmt.Sprintf("Loaded definition for view %s", qualifiedName(schema, input.ViewName))
 
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, GetViewDefinitionOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-			}
-
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }
@@ -306,17 +292,16 @@ func GetListMaterializedViewsTool() *ToolDefinition[ListMaterializedViewsInput, 
 			logger.LogDatabaseOperation("LIST_MATERIALIZED_VIEWS", query, int64(len(matViews)), nil)
 
 			output := ListMaterializedViewsOutput{MaterializedViews: matViews}
-
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, ListMaterializedViewsOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+			message := fmt.Sprintf(
+				"Found %d materialized %s",
+				len(matViews),
+				pluralize(len(matViews), "view", "views"),
+			)
+			if input.Schema != "" {
+				message += fmt.Sprintf(" in schema '%s'", schema)
 			}
 
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }

@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -134,17 +133,12 @@ func GetListTablesTool() *ToolDefinition[ListTablesInput, ListTablesOutput] {
 			logger.LogDatabaseOperation("LIST_TABLES", query, int64(len(tables)), nil)
 
 			output := ListTablesOutput{Tables: tables}
-
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, ListTablesOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+			message := fmt.Sprintf("Found %d %s", len(tables), pluralize(len(tables), "table/view", "tables/views"))
+			if input.Schema != "" {
+				message += fmt.Sprintf(" in schema '%s'", schema)
 			}
 
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }

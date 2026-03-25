@@ -53,5 +53,4 @@ func RegisterTools(s *mcp.Server, cfg *config.Config, dbType string) {
 			GetSequenceInfoTool().Register(s)
 		}
 	}
-
 }

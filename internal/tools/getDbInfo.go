@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -113,16 +112,17 @@ func GetDbInfoTool() *ToolDefinition[GetDBInfoInput, GetDBInfoOutput] {
 
 			logger.LogDatabaseOperation("GET_DB_INFO", "Database information query", int64(tableCount), nil)
 
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, GetDBInfoOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-			}
+			message := fmt.Sprintf(
+				"Database '%s' (%s): %d %s, %d %s",
+				output.DatabaseName,
+				output.Version,
+				len(output.Schemas),
+				pluralize(len(output.Schemas), "schema", "schemas"),
+				output.TableCount,
+				pluralize(output.TableCount, "table", "tables"),
+			)
 
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }

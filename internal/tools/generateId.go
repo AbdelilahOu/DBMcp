@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -92,16 +91,7 @@ func GetGenerateIdTool() *ToolDefinition[GenerateIdInput, GenerateIdOutput] {
 				Message: fmt.Sprintf("Successfully generated %d %s ID(s)", input.Count, input.Type),
 			}
 
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, GenerateIdOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-			}
-
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(output.Message), output, nil
 		},
 	)
 }

@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -121,17 +120,12 @@ func GetListSequencesTool() *ToolDefinition[ListSequencesInput, ListSequencesOut
 			logger.LogDatabaseOperation("LIST_SEQUENCES", query, int64(len(sequences)), nil)
 
 			output := ListSequencesOutput{Sequences: sequences}
-
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, ListSequencesOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+			message := fmt.Sprintf("Found %d %s", len(sequences), pluralize(len(sequences), "sequence", "sequences"))
+			if input.Schema != "" {
+				message += fmt.Sprintf(" in schema '%s'", schema)
 			}
 
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }
@@ -216,17 +210,15 @@ func GetSequenceInfoTool() *ToolDefinition[GetSequenceInfoInput, GetSequenceInfo
 			}
 
 			logger.LogDatabaseOperation("GET_SEQUENCE_INFO", query, 1, nil)
+			message := fmt.Sprintf(
+				"Sequence %s: last=%d, start=%d, increment=%d",
+				qualifiedName(output.Schema, output.SequenceName),
+				output.LastValue,
+				output.StartValue,
+				output.IncrementBy,
+			)
 
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, GetSequenceInfoOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-			}
-
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }

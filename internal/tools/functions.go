@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -80,17 +79,12 @@ func GetListFunctionsTool() *ToolDefinition[ListFunctionsInput, ListFunctionsOut
 			logger.LogDatabaseOperation("LIST_FUNCTIONS", "list functions", int64(len(functions)), nil)
 
 			output := ListFunctionsOutput{Functions: functions}
-
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, ListFunctionsOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+			message := fmt.Sprintf("Found %d %s", len(functions), pluralize(len(functions), "function", "functions"))
+			if input.Schema != "" {
+				message += fmt.Sprintf(" in schema '%s'", schema)
 			}
 
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }
@@ -132,17 +126,14 @@ func GetFunctionDefinitionTool() *ToolDefinition[GetFunctionDefinitionInput, Get
 			}
 
 			logger.LogDatabaseOperation("GET_FUNCTION_DEFINITION", "get function definition", 1, nil)
+			message := fmt.Sprintf(
+				"Loaded definition for function %s (%s, returns %s)",
+				qualifiedName(output.Schema, output.FunctionName),
+				output.Language,
+				output.ReturnType,
+			)
 
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, GetFunctionDefinitionOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-			}
-
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }

@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -71,17 +70,12 @@ func GetListConstraintsTool() *ToolDefinition[ListConstraintsInput, ListConstrai
 			logger.LogDatabaseOperation("LIST_CONSTRAINTS", "list constraints", int64(len(constraints)), nil)
 
 			output := ListConstraintsOutput{Constraints: constraints}
-
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, ListConstraintsOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+			message := fmt.Sprintf("Found %d %s", len(constraints), pluralize(len(constraints), "constraint", "constraints"))
+			if input.TableName != "" {
+				message += fmt.Sprintf(" for %s", qualifiedName(schema, input.TableName))
 			}
 
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }

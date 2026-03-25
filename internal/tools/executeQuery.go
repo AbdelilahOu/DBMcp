@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -84,16 +83,7 @@ func GetExecuteQueryTool() *ToolDefinition[ExecuteQueryInput, ExecuteQueryOutput
 				Message:      message,
 			}
 
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, ExecuteQueryOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-			}
-
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(output.Message), output, nil
 		},
 	)
 }

@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/AbdelilahOu/DBMcp/internal/logger"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -35,4 +36,26 @@ func (td *ToolDefinition[TInput, TOutput]) Register(s *mcp.Server) {
 	}
 
 	mcp.AddTool(s, td.Tool, wrappedHandler)
+}
+
+func textResult(message string) *mcp.CallToolResult {
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: message},
+		},
+	}
+}
+
+func pluralize(count int, singular, plural string) string {
+	if count == 1 {
+		return singular
+	}
+	return plural
+}
+
+func qualifiedName(schema, name string) string {
+	if schema == "" {
+		return name
+	}
+	return fmt.Sprintf("%s.%s", schema, name)
 }

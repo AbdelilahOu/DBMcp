@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -83,17 +82,12 @@ func GetListTriggersTool() *ToolDefinition[ListTriggersInput, ListTriggersOutput
 			logger.LogDatabaseOperation("LIST_TRIGGERS", "list triggers", int64(len(triggers)), nil)
 
 			output := ListTriggersOutput{Triggers: triggers}
-
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, ListTriggersOutput{}, fmt.Errorf("JSON marshal error: %v", err)
+			message := fmt.Sprintf("Found %d %s", len(triggers), pluralize(len(triggers), "trigger", "triggers"))
+			if input.TableName != "" {
+				message += fmt.Sprintf(" for %s", qualifiedName(schema, input.TableName))
 			}
 
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }
@@ -135,17 +129,15 @@ func GetTriggerDefinitionTool() *ToolDefinition[GetTriggerDefinitionInput, GetTr
 			}
 
 			logger.LogDatabaseOperation("GET_TRIGGER_DEFINITION", "get trigger definition", 1, nil)
+			message := fmt.Sprintf(
+				"Loaded trigger %s on %s (%s %s)",
+				qualifiedName(output.Schema, output.TriggerName),
+				output.TableName,
+				output.Timing,
+				output.Event,
+			)
 
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, GetTriggerDefinitionOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-			}
-
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }

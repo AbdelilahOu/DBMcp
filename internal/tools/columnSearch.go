@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -72,17 +71,14 @@ func GetFindColumnTool() *ToolDefinition[FindColumnInput, FindColumnOutput] {
 			logger.LogDatabaseOperation("FIND_COLUMN", fmt.Sprintf("search for column: %s", input.ColumnName), int64(len(columns)), nil)
 
 			output := FindColumnOutput{Columns: columns}
+			message := fmt.Sprintf(
+				"Found %d matching %s for column '%s'",
+				len(columns),
+				pluralize(len(columns), "column", "columns"),
+				input.ColumnName,
+			)
 
-			jsonBytes, err := json.Marshal(output)
-			if err != nil {
-				return nil, FindColumnOutput{}, fmt.Errorf("JSON marshal error: %v", err)
-			}
-
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: string(jsonBytes)},
-				},
-			}, output, nil
+			return textResult(message), output, nil
 		},
 	)
 }
