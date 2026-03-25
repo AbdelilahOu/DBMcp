@@ -7,10 +7,7 @@ import (
 )
 
 func RegisterTools(s *mcp.Server, cfg *config.Config, dbType string) {
-	advancedEnabled := true
-	if cfg != nil {
-		advancedEnabled = cfg.AdvancedToolsEnabled()
-	}
+	advancedEnabled := cfg.AdvancedToolsEnabled()
 
 	GetListConnectionsTool(cfg).Register(s)
 	GetSwitchConnectionTool(cfg).Register(s)
