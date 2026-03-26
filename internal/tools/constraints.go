@@ -54,17 +54,16 @@ func GetListConstraintsTool() *ToolDefinition[ListConstraintsInput, ListConstrai
 			defer cancel()
 
 			var constraints []ConstraintInfo
-			var err2 error
 
 			if sessionState.DBType == "postgres" {
-				constraints, err2 = getPostgresConstraints(ctx, sessionState.Conn, input.TableName, schema)
+				constraints, err = getPostgresConstraints(ctx, sessionState.Conn, input.TableName, schema)
 			} else {
-				constraints, err2 = getMySQLConstraints(ctx, sessionState.Conn, input.TableName, schema)
+				constraints, err = getMySQLConstraints(ctx, sessionState.Conn, input.TableName, schema)
 			}
 
-			if err2 != nil {
-				logger.LogDatabaseOperation("LIST_CONSTRAINTS", "list constraints", 0, err2)
-				return nil, ListConstraintsOutput{}, err2
+			if err != nil {
+				logger.LogDatabaseOperation("LIST_CONSTRAINTS", "list constraints", 0, err)
+				return nil, ListConstraintsOutput{}, err
 			}
 
 			logger.LogDatabaseOperation("LIST_CONSTRAINTS", "list constraints", int64(len(constraints)), nil)

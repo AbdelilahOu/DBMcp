@@ -63,17 +63,16 @@ func GetListFunctionsTool() *ToolDefinition[ListFunctionsInput, ListFunctionsOut
 			defer cancel()
 
 			var functions []FunctionInfo
-			var err2 error
 
 			if sessionState.DBType == "postgres" {
-				functions, err2 = getPostgresFunctions(ctx, sessionState.Conn, schema, input.Schema != "")
+				functions, err = getPostgresFunctions(ctx, sessionState.Conn, schema, input.Schema != "")
 			} else {
-				functions, err2 = getMySQLFunctions(ctx, sessionState.Conn, schema, input.Schema != "")
+				functions, err = getMySQLFunctions(ctx, sessionState.Conn, schema, input.Schema != "")
 			}
 
-			if err2 != nil {
-				logger.LogDatabaseOperation("LIST_FUNCTIONS", "list functions", 0, err2)
-				return nil, ListFunctionsOutput{}, err2
+			if err != nil {
+				logger.LogDatabaseOperation("LIST_FUNCTIONS", "list functions", 0, err)
+				return nil, ListFunctionsOutput{}, err
 			}
 
 			logger.LogDatabaseOperation("LIST_FUNCTIONS", "list functions", int64(len(functions)), nil)
@@ -112,17 +111,16 @@ func GetFunctionDefinitionTool() *ToolDefinition[GetFunctionDefinitionInput, Get
 			defer cancel()
 
 			var output GetFunctionDefinitionOutput
-			var err2 error
 
 			if sessionState.DBType == "postgres" {
-				output, err2 = getPostgresFunctionDefinition(ctx, sessionState.Conn, input.FunctionName, schema)
+				output, err = getPostgresFunctionDefinition(ctx, sessionState.Conn, input.FunctionName, schema)
 			} else {
-				output, err2 = getMySQLFunctionDefinition(ctx, sessionState.Conn, input.FunctionName, schema)
+				output, err = getMySQLFunctionDefinition(ctx, sessionState.Conn, input.FunctionName, schema)
 			}
 
-			if err2 != nil {
-				logger.LogDatabaseOperation("GET_FUNCTION_DEFINITION", "get function definition", 0, err2)
-				return nil, GetFunctionDefinitionOutput{}, err2
+			if err != nil {
+				logger.LogDatabaseOperation("GET_FUNCTION_DEFINITION", "get function definition", 0, err)
+				return nil, GetFunctionDefinitionOutput{}, err
 			}
 
 			logger.LogDatabaseOperation("GET_FUNCTION_DEFINITION", "get function definition", 1, nil)

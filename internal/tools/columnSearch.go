@@ -55,17 +55,16 @@ func GetFindColumnTool() *ToolDefinition[FindColumnInput, FindColumnOutput] {
 			defer cancel()
 
 			var columns []ColumnLocation
-			var err2 error
 
 			if sessionState.DBType == "postgres" {
-				columns, err2 = findPostgresColumns(ctx, sessionState.Conn, input, schema)
+				columns, err = findPostgresColumns(ctx, sessionState.Conn, input, schema)
 			} else {
-				columns, err2 = findMySQLColumns(ctx, sessionState.Conn, input, schema)
+				columns, err = findMySQLColumns(ctx, sessionState.Conn, input, schema)
 			}
 
-			if err2 != nil {
-				logger.LogDatabaseOperation("FIND_COLUMN", fmt.Sprintf("search for column: %s", input.ColumnName), 0, err2)
-				return nil, FindColumnOutput{}, err2
+			if err != nil {
+				logger.LogDatabaseOperation("FIND_COLUMN", fmt.Sprintf("search for column: %s", input.ColumnName), 0, err)
+				return nil, FindColumnOutput{}, err
 			}
 
 			logger.LogDatabaseOperation("FIND_COLUMN", fmt.Sprintf("search for column: %s", input.ColumnName), int64(len(columns)), nil)

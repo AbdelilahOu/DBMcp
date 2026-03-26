@@ -77,17 +77,16 @@ func GetListForeignKeysTool() *ToolDefinition[ListForeignKeysInput, ListForeignK
 			defer cancel()
 
 			var foreignKeys []ForeignKeyInfo
-			var err2 error
 
 			if sessionState.DBType == "postgres" {
-				foreignKeys, err2 = getPostgresForeignKeys(ctx, sessionState.Conn, input.TableName, schema)
+				foreignKeys, err = getPostgresForeignKeys(ctx, sessionState.Conn, input.TableName, schema)
 			} else {
-				foreignKeys, err2 = getMySQLForeignKeys(ctx, sessionState.Conn, input.TableName, schema)
+				foreignKeys, err = getMySQLForeignKeys(ctx, sessionState.Conn, input.TableName, schema)
 			}
 
-			if err2 != nil {
-				logger.LogDatabaseOperation("LIST_FOREIGN_KEYS", "list foreign keys", 0, err2)
-				return nil, ListForeignKeysOutput{}, err2
+			if err != nil {
+				logger.LogDatabaseOperation("LIST_FOREIGN_KEYS", "list foreign keys", 0, err)
+				return nil, ListForeignKeysOutput{}, err
 			}
 
 			logger.LogDatabaseOperation("LIST_FOREIGN_KEYS", "list foreign keys", int64(len(foreignKeys)), nil)
@@ -126,17 +125,16 @@ func GetTableRelationshipsTool() *ToolDefinition[GetTableRelationshipsInput, Get
 			defer cancel()
 
 			var relationships []RelationshipInfo
-			var err2 error
 
 			if sessionState.DBType == "postgres" {
-				relationships, err2 = getPostgresRelationships(ctx, sessionState.Conn, input.TableName, schema)
+				relationships, err = getPostgresRelationships(ctx, sessionState.Conn, input.TableName, schema)
 			} else {
-				relationships, err2 = getMySQLRelationships(ctx, sessionState.Conn, input.TableName, schema)
+				relationships, err = getMySQLRelationships(ctx, sessionState.Conn, input.TableName, schema)
 			}
 
-			if err2 != nil {
-				logger.LogDatabaseOperation("GET_TABLE_RELATIONSHIPS", fmt.Sprintf("get relationships for %s", input.TableName), 0, err2)
-				return nil, GetTableRelationshipsOutput{}, err2
+			if err != nil {
+				logger.LogDatabaseOperation("GET_TABLE_RELATIONSHIPS", fmt.Sprintf("get relationships for %s", input.TableName), 0, err)
+				return nil, GetTableRelationshipsOutput{}, err
 			}
 
 			logger.LogDatabaseOperation("GET_TABLE_RELATIONSHIPS", fmt.Sprintf("get relationships for %s", input.TableName), int64(len(relationships)), nil)

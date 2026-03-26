@@ -66,17 +66,16 @@ func GetListTriggersTool() *ToolDefinition[ListTriggersInput, ListTriggersOutput
 			defer cancel()
 
 			var triggers []TriggerInfo
-			var err2 error
 
 			if sessionState.DBType == "postgres" {
-				triggers, err2 = getPostgresTriggers(ctx, sessionState.Conn, input.TableName, schema)
+				triggers, err = getPostgresTriggers(ctx, sessionState.Conn, input.TableName, schema)
 			} else {
-				triggers, err2 = getMySQLTriggers(ctx, sessionState.Conn, input.TableName, schema)
+				triggers, err = getMySQLTriggers(ctx, sessionState.Conn, input.TableName, schema)
 			}
 
-			if err2 != nil {
-				logger.LogDatabaseOperation("LIST_TRIGGERS", "list triggers", 0, err2)
-				return nil, ListTriggersOutput{}, err2
+			if err != nil {
+				logger.LogDatabaseOperation("LIST_TRIGGERS", "list triggers", 0, err)
+				return nil, ListTriggersOutput{}, err
 			}
 
 			logger.LogDatabaseOperation("LIST_TRIGGERS", "list triggers", int64(len(triggers)), nil)
@@ -115,17 +114,16 @@ func GetTriggerDefinitionTool() *ToolDefinition[GetTriggerDefinitionInput, GetTr
 			defer cancel()
 
 			var output GetTriggerDefinitionOutput
-			var err2 error
 
 			if sessionState.DBType == "postgres" {
-				output, err2 = getPostgresTriggerDefinition(ctx, sessionState.Conn, input.TriggerName, schema)
+				output, err = getPostgresTriggerDefinition(ctx, sessionState.Conn, input.TriggerName, schema)
 			} else {
-				output, err2 = getMySQLTriggerDefinition(ctx, sessionState.Conn, input.TriggerName, schema)
+				output, err = getMySQLTriggerDefinition(ctx, sessionState.Conn, input.TriggerName, schema)
 			}
 
-			if err2 != nil {
-				logger.LogDatabaseOperation("GET_TRIGGER_DEFINITION", "get trigger definition", 0, err2)
-				return nil, GetTriggerDefinitionOutput{}, err2
+			if err != nil {
+				logger.LogDatabaseOperation("GET_TRIGGER_DEFINITION", "get trigger definition", 0, err)
+				return nil, GetTriggerDefinitionOutput{}, err
 			}
 
 			logger.LogDatabaseOperation("GET_TRIGGER_DEFINITION", "get trigger definition", 1, nil)
