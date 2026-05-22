@@ -30,6 +30,10 @@ func GetShowQueryTool() *ToolDefinition[ShowQueryInput, ShowQueryOutput] {
 				return nil, ShowQueryOutput{}, err
 			}
 
+			if !sessionState.Driver.SupportsShowCommands() {
+				return nil, ShowQueryOutput{}, fmt.Errorf("this database does not support SHOW commands")
+			}
+
 			queryLower := strings.ToLower(strings.TrimSpace(input.Query))
 			if !strings.HasPrefix(queryLower, "show") {
 				return nil, ShowQueryOutput{}, fmt.Errorf("only SHOW queries are allowed")

@@ -17,6 +17,12 @@
       "type": "postgres",
       "url": "postgresql://clinlims:clinlims@192.168.100.60:15432/clinlims?sslmode=disable",
       "description": "OPENELIS instance in the vps"
+    },
+    "MAHALLI": {
+      "name": "Mahalli-SQLite",
+      "type": "sqlite",
+      "url": "C:\\Users\\abdel\\AppData\\Roaming\\.mahalli\\data\\tenants\\casablanca-store.sqlite",
+      "description": "Mahalli local SQLite database"
     }
   },
   "default_connection": "",

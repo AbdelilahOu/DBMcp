@@ -2,11 +2,12 @@ package tools
 
 import (
 	"github.com/AbdelilahOu/DBMcp/internal/config"
+	"github.com/AbdelilahOu/DBMcp/internal/driver"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func RegisterTools(s *mcp.Server, cfg *config.Config, dbType string) {
+func RegisterTools(s *mcp.Server, cfg *config.Config, drv driver.Driver) {
 	advancedEnabled := cfg.AdvancedToolsEnabled()
 
 	GetListConnectionsTool(cfg).Register(s)
@@ -14,13 +15,14 @@ func RegisterTools(s *mcp.Server, cfg *config.Config, dbType string) {
 	GetTestConnectionTool(cfg).Register(s)
 
 	GetDbInfoTool().Register(s)
+	GetListSchemasTool().Register(s)
 	GetListTablesTool().Register(s)
 	GetDescribeTableTool().Register(s)
 	GetExecuteQueryTool().Register(s)
 	GetSelectQueryTool().Register(s)
 	GetGenerateIdTool().Register(s)
 
-	if dbType == "" || dbType == "postgres" {
+	if drv != nil && drv.SupportsEnums() {
 		GetListEnumsTool().Register(s)
 		GetEnumValuesTool().Register(s)
 	}
@@ -37,15 +39,19 @@ func RegisterTools(s *mcp.Server, cfg *config.Config, dbType string) {
 		GetListTriggersTool().Register(s)
 		GetTriggerDefinitionTool().Register(s)
 
-		GetListFunctionsTool().Register(s)
-		GetFunctionDefinitionTool().Register(s)
+		if drv == nil || drv.SupportsFunctions() {
+			GetListFunctionsTool().Register(s)
+			GetFunctionDefinitionTool().Register(s)
+		}
 
 		GetFindColumnTool().Register(s)
-
 		GetListConstraintsTool().Register(s)
 
-		if dbType == "" || dbType == "postgres" {
+		if drv != nil && drv.SupportsMaterializedViews() {
 			GetListMaterializedViewsTool().Register(s)
+		}
+
+		if drv != nil && drv.SupportsSequences() {
 			GetListSequencesTool().Register(s)
 			GetSequenceInfoTool().Register(s)
 		}

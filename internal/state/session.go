@@ -6,13 +6,13 @@ import (
 	"sync"
 
 	"github.com/AbdelilahOu/DBMcp/internal/client"
+	"github.com/AbdelilahOu/DBMcp/internal/driver"
 	"github.com/google/uuid"
 )
 
 type DBSessionState struct {
-	Conn          *sql.DB
-	CurrentSchema string
-	DBType        string
+	Conn   *sql.DB
+	Driver driver.Driver
 }
 
 var (
@@ -38,9 +38,7 @@ func CreateSession(sessionID string, globalClient *client.DBClient) *DBSessionSt
 		id = uuid.New().String()
 	}
 
-	nextState := &DBSessionState{
-		CurrentSchema: "public",
-	}
+	nextState := &DBSessionState{}
 	if globalClient == nil {
 		return SetSession(id, nextState)
 	}

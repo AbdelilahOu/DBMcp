@@ -2,9 +2,7 @@ package tools
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/AbdelilahOu/DBMcp/internal/logger"
@@ -37,182 +35,39 @@ func GetFindColumnTool() *ToolDefinition[FindColumnInput, FindColumnOutput] {
 		"find_column",
 		"Search columns by name across tables. Supports exact/partial match. Returns table, schema, column, type, position. For locating columns in large schemas.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input FindColumnInput) (*mcp.CallToolResult, FindColumnOutput, error) {
-			sessionState, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession("default")
 			if err != nil {
 				return nil, FindColumnOutput{}, err
-			}
-
-			if sessionState.DBType != "postgres" && sessionState.DBType != "mysql" {
-				return nil, FindColumnOutput{}, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", sessionState.DBType)
-			}
-
-			schema := input.Schema
-			if schema == "" {
-				schema = sessionState.CurrentSchema
 			}
 
 			ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 			defer cancel()
 
-			var columns []ColumnLocation
-
-			if sessionState.DBType == "postgres" {
-				columns, err = findPostgresColumns(ctx, sessionState.Conn, input, schema)
-			} else {
-				columns, err = findMySQLColumns(ctx, sessionState.Conn, input, schema)
-			}
-
+			rows, err := session.Driver.FindColumns(ctx, session.Conn, input.ColumnName, input.TableName, input.Schema, input.ExactMatch)
 			if err != nil {
 				logger.LogDatabaseOperation("FIND_COLUMN", fmt.Sprintf("search for column: %s", input.ColumnName), 0, err)
 				return nil, FindColumnOutput{}, err
 			}
 
-			logger.LogDatabaseOperation("FIND_COLUMN", fmt.Sprintf("search for column: %s", input.ColumnName), int64(len(columns)), nil)
+			cols := make([]ColumnLocation, len(rows))
+			for i, r := range rows {
+				cols[i] = ColumnLocation{
+					TableName:   r.TableName,
+					TableSchema: r.TableSchema,
+					ColumnName:  r.ColumnName,
+					DataType:    r.DataType,
+					IsNullable:  r.IsNullable,
+					Position:    r.Position,
+				}
+			}
 
-			output := FindColumnOutput{Columns: columns}
-			message := fmt.Sprintf(
-				"Found %d matching %s for column '%s'",
-				len(columns),
-				pluralize(len(columns), "column", "columns"),
-				input.ColumnName,
-			)
+			logger.LogDatabaseOperation("FIND_COLUMN", fmt.Sprintf("search for column: %s", input.ColumnName), int64(len(cols)), nil)
+
+			output := FindColumnOutput{Columns: cols}
+			message := fmt.Sprintf("Found %d matching %s for column '%s'",
+				len(cols), pluralize(len(cols), "column", "columns"), input.ColumnName)
 
 			return textResult(message), output, nil
 		},
 	)
-}
-
-func findPostgresColumns(ctx context.Context, conn *sql.DB, input FindColumnInput, schema string) ([]ColumnLocation, error) {
-	query := `
-		SELECT
-			table_name,
-			table_schema,
-			column_name,
-			data_type,
-			CASE WHEN is_nullable = 'YES' THEN true ELSE false END as is_nullable,
-			ordinal_position
-		FROM information_schema.columns
-		WHERE table_schema NOT IN ('information_schema', 'pg_catalog')`
-
-	var args []interface{}
-	argCount := 0
-
-	if input.Schema != "" {
-		argCount++
-		query += fmt.Sprintf(" AND table_schema = $%d", argCount)
-		args = append(args, schema)
-	}
-
-	if input.TableName != "" {
-		argCount++
-		query += fmt.Sprintf(" AND table_name = $%d", argCount)
-		args = append(args, input.TableName)
-	}
-
-	if input.ExactMatch {
-		argCount++
-		query += fmt.Sprintf(" AND column_name = $%d", argCount)
-		args = append(args, input.ColumnName)
-	} else {
-		argCount++
-		query += fmt.Sprintf(" AND column_name ILIKE $%d", argCount)
-		args = append(args, "%"+input.ColumnName+"%")
-	}
-
-	query += " ORDER BY table_schema, table_name, ordinal_position"
-
-	rows, err := conn.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("query error: %v", err)
-	}
-	defer rows.Close()
-
-	var columns []ColumnLocation
-	for rows.Next() {
-		var col ColumnLocation
-
-		err := rows.Scan(
-			&col.TableName,
-			&col.TableSchema,
-			&col.ColumnName,
-			&col.DataType,
-			&col.IsNullable,
-			&col.Position,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("scan error: %v", err)
-		}
-
-		columns = append(columns, col)
-	}
-
-	return columns, rows.Err()
-}
-
-func findMySQLColumns(ctx context.Context, conn *sql.DB, input FindColumnInput, schema string) ([]ColumnLocation, error) {
-	query := `
-		SELECT
-			table_name,
-			table_schema,
-			column_name,
-			data_type,
-			CASE WHEN is_nullable = 'YES' THEN true ELSE false END as is_nullable,
-			ordinal_position
-		FROM information_schema.columns
-		WHERE table_schema NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')`
-
-	var args []interface{}
-
-	if input.Schema != "" {
-		query += " AND table_schema = ?"
-		args = append(args, schema)
-	}
-
-	if input.TableName != "" {
-		query += " AND table_name = ?"
-		args = append(args, input.TableName)
-	}
-
-	if input.ExactMatch {
-		query += " AND column_name = ?"
-		args = append(args, input.ColumnName)
-	} else {
-		query += " AND column_name LIKE ?"
-		args = append(args, "%"+input.ColumnName+"%")
-	}
-
-	query += " ORDER BY table_schema, table_name, ordinal_position"
-
-	rows, err := conn.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("query error: %v", err)
-	}
-	defer rows.Close()
-
-	var columns []ColumnLocation
-	for rows.Next() {
-		var col ColumnLocation
-
-		err := rows.Scan(
-			&col.TableName,
-			&col.TableSchema,
-			&col.ColumnName,
-			&col.DataType,
-			&col.IsNullable,
-			&col.Position,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("scan error: %v", err)
-		}
-
-		if !input.ExactMatch && !strings.EqualFold(col.ColumnName, input.ColumnName) {
-			if !strings.Contains(strings.ToLower(col.ColumnName), strings.ToLower(input.ColumnName)) {
-				continue
-			}
-		}
-
-		columns = append(columns, col)
-	}
-
-	return columns, rows.Err()
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/AbdelilahOu/DBMcp/internal/client"
 	"github.com/AbdelilahOu/DBMcp/internal/config"
+	"github.com/AbdelilahOu/DBMcp/internal/driver"
 	"github.com/AbdelilahOu/DBMcp/internal/logger"
 	"github.com/AbdelilahOu/DBMcp/internal/state"
 
@@ -109,27 +110,21 @@ func GetSwitchConnectionTool(cfg *config.Config) *ToolDefinition[SwitchConnectio
 				return nil, SwitchConnectionOutput{}, fmt.Errorf("failed to connect to '%s': %v", input.Connection, err)
 			}
 
-			currentSchema := "public"
-			if conn.Type == "postgres" {
-				err = dbClient.DB.QueryRow("SELECT current_schema()").Scan(&currentSchema)
-				if err != nil {
-					currentSchema = "public"
-				}
-			} else if conn.Type == "mysql" {
-				err = dbClient.DB.QueryRow("SELECT DATABASE()").Scan(&currentSchema)
-				if err != nil {
-					_ = dbClient.Close()
-					logger.LogConnectionEvent("switch_connection", input.Connection, conn.Type, fmt.Errorf("failed to get current database: %v", err))
-					return nil, SwitchConnectionOutput{}, fmt.Errorf("failed to get current database: %v", err)
-				}
+			var dbDriver driver.Driver
+			switch conn.Type {
+			case "postgres":
+				dbDriver = &driver.PostgresDriver{}
+			case "mysql":
+				dbDriver = &driver.MysqlDriver{}
+			case "sqlite":
+				dbDriver = &driver.SqliteDriver{}
 			}
 
-			sessionID := "default"
-			sessionState := state.SetSession(sessionID, &state.DBSessionState{
-				Conn:          dbClient.DB,
-				CurrentSchema: currentSchema,
-				DBType:        conn.Type,
+			sessionState := state.SetSession("default", &state.DBSessionState{
+				Conn:   dbClient.DB,
+				Driver: dbDriver,
 			})
+
 			if sessionState == nil {
 				_ = dbClient.Close()
 				logger.LogConnectionEvent("switch_connection", input.Connection, conn.Type, fmt.Errorf("failed to create session"))

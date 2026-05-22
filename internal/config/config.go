@@ -71,8 +71,8 @@ func (c *Config) ValidateConnection(conn Connection) error {
 	if conn.Type == "" {
 		return fmt.Errorf("connection type is required")
 	}
-	if conn.Type != "postgres" && conn.Type != "mysql" {
-		return fmt.Errorf("connection type must be 'postgres' or 'mysql'")
+	if conn.Type != "postgres" && conn.Type != "mysql" && conn.Type != "sqlite" {
+		return fmt.Errorf("connection type must be 'postgres', 'mysql', or 'sqlite'")
 	}
 	if conn.URL == "" {
 		return fmt.Errorf("connection URL is required")
