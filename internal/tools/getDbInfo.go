@@ -2,9 +2,7 @@ package tools
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/AbdelilahOu/DBMcp/internal/logger"
@@ -26,122 +24,37 @@ func GetDbInfoTool() *ToolDefinition[GetDBInfoInput, GetDBInfoOutput] {
 		"get_db_info",
 		"Get DB overview: name, version, schemas, table count. Entry point for unfamiliar DBs. Use list_tables/describe_table/analyze_table for table details.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetDBInfoInput) (*mcp.CallToolResult, GetDBInfoOutput, error) {
-			sessionState, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession("default")
 			if err != nil {
 				return nil, GetDBInfoOutput{}, err
-			}
-
-			if sessionState.DBType != "postgres" && sessionState.DBType != "mysql" {
-				return nil, GetDBInfoOutput{}, fmt.Errorf("unsupported database type: %s. Only 'postgres' and 'mysql' are supported", sessionState.DBType)
 			}
 
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			defer cancel()
 
-			var dbName, version string
-			var schemas []string
-			var tableCount int
-
-			if sessionState.DBType == "postgres" {
-				pgDbNameQuery := "SELECT current_database()"
-				pgVersionQuery := "SELECT version()"
-				pgSchemasQuery := "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast')"
-				pgTableCountQuery := "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')"
-
-				err = sessionState.Conn.QueryRowContext(ctx, pgDbNameQuery).Scan(&dbName)
-				if err != nil {
-					return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get database name: %v", err)
-				}
-
-				err = sessionState.Conn.QueryRowContext(ctx, pgVersionQuery).Scan(&version)
-				if err != nil {
-					return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get version: %v", err)
-				}
-
-				if strings.Contains(version, "PostgreSQL") {
-					parts := strings.Fields(version)
-					if len(parts) >= 2 {
-						version = "PostgreSQL " + parts[1]
-					}
-				}
-
-				schemas, err = getStringSliceFromQuery(ctx, sessionState.Conn, pgSchemasQuery)
-				if err != nil {
-					return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get schemas: %v", err)
-				}
-
-				err = sessionState.Conn.QueryRowContext(ctx, pgTableCountQuery).Scan(&tableCount)
-				if err != nil {
-					return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get table count: %v", err)
-				}
-			} else if sessionState.DBType == "mysql" {
-				mysqlDbNameQuery := "SELECT DATABASE()"
-				mysqlVersionQuery := "SELECT VERSION()"
-				mysqlSchemasQuery := "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')"
-				mysqlTableCountQuery := "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')"
-
-				err = sessionState.Conn.QueryRowContext(ctx, mysqlDbNameQuery).Scan(&dbName)
-				if err != nil {
-					return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get database name: %v", err)
-				}
-
-				err = sessionState.Conn.QueryRowContext(ctx, mysqlVersionQuery).Scan(&version)
-				if err != nil {
-					return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get version: %v", err)
-				}
-
-				schemas, err = getStringSliceFromQuery(ctx, sessionState.Conn, mysqlSchemasQuery)
-				if err != nil {
-					return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get schemas: %v", err)
-				}
-
-				err = sessionState.Conn.QueryRowContext(ctx, mysqlTableCountQuery).Scan(&tableCount)
-				if err != nil {
-					return nil, GetDBInfoOutput{}, fmt.Errorf("failed to get table count: %v", err)
-				}
-
-				version = "MySQL " + version
+			info, err := session.Driver.GetDbInfo(ctx, session.Conn)
+			if err != nil {
+				logger.LogDatabaseOperation("GET_DB_INFO", "get db info", 0, err)
+				return nil, GetDBInfoOutput{}, err
 			}
 
 			output := GetDBInfoOutput{
-				DatabaseName: dbName,
-				Version:      version,
-				Schemas:      schemas,
-				TableCount:   tableCount,
+				DatabaseName: info.DatabaseName,
+				Version:      info.Version,
+				Schemas:      info.Schemas,
+				TableCount:   info.TableCount,
 			}
 
-			logger.LogDatabaseOperation("GET_DB_INFO", "Database information query", int64(tableCount), nil)
+			logger.LogDatabaseOperation("GET_DB_INFO", "Database information query", int64(output.TableCount), nil)
 
 			message := fmt.Sprintf(
 				"Database '%s' (%s): %d %s, %d %s",
-				output.DatabaseName,
-				output.Version,
-				len(output.Schemas),
-				pluralize(len(output.Schemas), "schema", "schemas"),
-				output.TableCount,
-				pluralize(output.TableCount, "table", "tables"),
+				output.DatabaseName, output.Version,
+				len(output.Schemas), pluralize(len(output.Schemas), "schema", "schemas"),
+				output.TableCount, pluralize(output.TableCount, "table", "tables"),
 			)
 
 			return textResult(message), output, nil
 		},
 	)
-}
-
-func getStringSliceFromQuery(ctx context.Context, conn *sql.DB, query string) ([]string, error) {
-	rows, err := conn.QueryContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var result []string
-	for rows.Next() {
-		var value string
-		if err := rows.Scan(&value); err != nil {
-			return nil, err
-		}
-		result = append(result, value)
-	}
-
-	return result, rows.Err()
 }

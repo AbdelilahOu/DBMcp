@@ -9,6 +9,7 @@ import (
 
 	"github.com/AbdelilahOu/DBMcp/internal/client"
 	"github.com/AbdelilahOu/DBMcp/internal/config"
+	"github.com/AbdelilahOu/DBMcp/internal/driver"
 	"github.com/AbdelilahOu/DBMcp/internal/logger"
 	"github.com/AbdelilahOu/DBMcp/internal/state"
 	"github.com/AbdelilahOu/DBMcp/internal/tools"
@@ -46,7 +47,7 @@ func NewMCPServer(cfg MCPServerConfig) (*mcp.Server, error) {
 		"version": cfg.Version,
 	})
 
-	var dbType string
+	var initialDriver driver.Driver
 	if cfg.InitialConnection != "" {
 		conn, exists := cfg.Config.GetConnection(cfg.InitialConnection)
 		if !exists {
@@ -56,7 +57,7 @@ func NewMCPServer(cfg MCPServerConfig) (*mcp.Server, error) {
 			})
 			return nil, err
 		}
-		err := initializeConnection(conn, cfg.InitialConnection)
+		drv, err := initializeConnection(conn, cfg.InitialConnection)
 		if err != nil {
 			logger.Error("Failed to initialize connection", err, map[string]interface{}{
 				"connection": cfg.InitialConnection,
@@ -68,10 +69,10 @@ func NewMCPServer(cfg MCPServerConfig) (*mcp.Server, error) {
 			"type":       conn.Type,
 		})
 		fmt.Fprintf(os.Stderr, "Successfully initialized connection: %s\n", cfg.InitialConnection)
-		dbType = conn.Type
+		initialDriver = drv
 	}
 
-	tools.RegisterTools(server, cfg.Config, dbType)
+	tools.RegisterTools(server, cfg.Config, initialDriver)
 
 	return server, nil
 }
@@ -82,43 +83,36 @@ type StdioServerConfig struct {
 	Config            *config.Config
 }
 
-func initializeConnection(conn config.Connection, connectionName string) error {
+func initializeConnection(conn config.Connection, connectionName string) (driver.Driver, error) {
 	dbClient, err := client.NewDBClient(conn.URL, conn.Type)
 	if err != nil {
 		logger.LogConnectionEvent("initialize_connection", connectionName, conn.Type, err)
-		return fmt.Errorf("failed to connect to database: %w", err)
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	currentSchema := "public"
-	if conn.Type == "postgres" {
-		err = dbClient.DB.QueryRow("SELECT current_schema()").Scan(&currentSchema)
-		if err != nil {
-			currentSchema = "public"
-		}
-	} else if conn.Type == "mysql" {
-		err = dbClient.DB.QueryRow("SELECT DATABASE()").Scan(&currentSchema)
-		if err != nil {
-			_ = dbClient.Close()
-			logger.LogConnectionEvent("initialize_connection", connectionName, conn.Type, fmt.Errorf("failed to get current database: %v", err))
-			return fmt.Errorf("failed to get current database: %w", err)
-		}
+	var drv driver.Driver
+	switch conn.Type {
+	case "postgres":
+		drv = &driver.PostgresDriver{}
+	case "mysql":
+		drv = &driver.MysqlDriver{}
+	case "sqlite":
+		drv = &driver.SqliteDriver{}
 	}
 
-	sessionID := "default"
-	sessionState := state.SetSession(sessionID, &state.DBSessionState{
-		Conn:          dbClient.DB,
-		CurrentSchema: currentSchema,
-		DBType:        conn.Type,
+	sessionState := state.SetSession("default", &state.DBSessionState{
+		Conn:   dbClient.DB,
+		Driver: drv,
 	})
 	if sessionState == nil {
 		_ = dbClient.Close()
 		err := fmt.Errorf("failed to create session")
 		logger.LogConnectionEvent("initialize_connection", connectionName, conn.Type, err)
-		return err
+		return nil, err
 	}
 
 	logger.LogConnectionEvent("initialize_connection", connectionName, conn.Type, nil)
-	return nil
+	return drv, nil
 }
 
 func RunStdioServer(cfg StdioServerConfig) error {
