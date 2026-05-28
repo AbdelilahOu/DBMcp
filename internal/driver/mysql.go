@@ -9,11 +9,15 @@ import (
 
 type MysqlDriver struct{}
 
-func (d *MysqlDriver) SupportsEnums() bool             { return false }
-func (d *MysqlDriver) SupportsSequences() bool         { return false }
+func (d *MysqlDriver) SupportsEnums() bool { return false }
+
+func (d *MysqlDriver) SupportsSequences() bool { return false }
+
 func (d *MysqlDriver) SupportsMaterializedViews() bool { return false }
-func (d *MysqlDriver) SupportsFunctions() bool         { return true }
-func (d *MysqlDriver) SupportsShowCommands() bool      { return true }
+
+func (d *MysqlDriver) SupportsFunctions() bool { return true }
+
+func (d *MysqlDriver) SupportsShowCommands() bool { return true }
 
 func (d *MysqlDriver) ListSchemas(ctx context.Context, conn *sql.DB) ([]SchemaRow, error) {
 	rows, err := conn.QueryContext(ctx,

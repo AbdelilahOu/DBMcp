@@ -9,11 +9,15 @@ import (
 
 type SqliteDriver struct{}
 
-func (d *SqliteDriver) SupportsEnums() bool             { return false }
-func (d *SqliteDriver) SupportsSequences() bool         { return false }
+func (d *SqliteDriver) SupportsEnums() bool { return false }
+
+func (d *SqliteDriver) SupportsSequences() bool { return false }
+
 func (d *SqliteDriver) SupportsMaterializedViews() bool { return false }
-func (d *SqliteDriver) SupportsFunctions() bool         { return false }
-func (d *SqliteDriver) SupportsShowCommands() bool      { return false }
+
+func (d *SqliteDriver) SupportsFunctions() bool { return false }
+
+func (d *SqliteDriver) SupportsShowCommands() bool { return false }
 
 func (d *SqliteDriver) ListSchemas(ctx context.Context, conn *sql.DB) ([]SchemaRow, error) {
 	rows, err := conn.QueryContext(ctx, "PRAGMA database_list")

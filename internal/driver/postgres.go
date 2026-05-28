@@ -9,11 +9,15 @@ import (
 
 type PostgresDriver struct{}
 
-func (d *PostgresDriver) SupportsEnums() bool             { return true }
-func (d *PostgresDriver) SupportsSequences() bool         { return true }
+func (d *PostgresDriver) SupportsEnums() bool { return true }
+
+func (d *PostgresDriver) SupportsSequences() bool { return true }
+
 func (d *PostgresDriver) SupportsMaterializedViews() bool { return true }
-func (d *PostgresDriver) SupportsFunctions() bool         { return true }
-func (d *PostgresDriver) SupportsShowCommands() bool      { return true }
+
+func (d *PostgresDriver) SupportsFunctions() bool { return true }
+
+func (d *PostgresDriver) SupportsShowCommands() bool { return true }
 
 func (d *PostgresDriver) defaultSchema(schema string) string {
 	if schema == "" {
