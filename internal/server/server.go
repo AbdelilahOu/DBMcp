@@ -34,7 +34,7 @@ func NewMCPServer(cfg MCPServerConfig) (*mcp.Server, error) {
 		fmt.Fprintf(os.Stderr, "Warning: Failed to initialize logger: %v\n", err)
 	} else {
 		logger.Info("Logger initialized successfully", map[string]interface{}{
-			"level":       logger.LogLevelString(logCfg.Level),
+			"level":       logCfg.Level.String(),
 			"output_file": logCfg.OutputFile,
 			"console":     logCfg.Console,
 		})

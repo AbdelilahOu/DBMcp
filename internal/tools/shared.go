@@ -30,7 +30,7 @@ func (td *ToolDefinition[TInput, TOutput]) Register(s *mcp.Server) {
 	wrappedHandler := func(ctx context.Context, req *mcp.CallToolRequest, input TInput) (*mcp.CallToolResult, TOutput, error) {
 		result, output, err := td.Handler(ctx, req, input)
 
-		logger.LogToolCall(td.Tool.Name, input, output, err)
+		logger.LogToolCall(td.Tool.Name, err)
 
 		return result, output, err
 	}

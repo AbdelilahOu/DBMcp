@@ -6,7 +6,7 @@ A Model Context Protocol (MCP) server that provides comprehensive database conne
 
 This MCP server bridges the gap between AI assistants and database systems, allowing Claude to:
 
-- **Connect to multiple databases** - PostgreSQL, MySQL, and other SQL databases
+- **Connect to multiple databases** - PostgreSQL, MySQL, and SQLite
 - **Execute queries safely** - With built-in validation and optional read-only modes
 - **Explore database schemas** - Inspect tables, columns, indexes, and relationships
 - **Analyze data** - Get table statistics and query performance insights
@@ -14,7 +14,7 @@ This MCP server bridges the gap between AI assistants and database systems, allo
 
 ## Key Features
 
-- **Multi-Database Support** - Connect to PostgreSQL, MySQL, and other SQL databases
+- **Multi-Database Support** - PostgreSQL, MySQL, and SQLite
 - **Security First** - Read-only mode, query validation, and secure credential handling
 - **Rich Schema Inspection** - Detailed table descriptions, column metadata, and index information
 - **Performance Analysis** - Query execution plans and table statistics
@@ -26,22 +26,17 @@ This MCP server bridges the gap between AI assistants and database systems, allo
 Use `settings.advanced` in `connections.json` to control how many tools are registered:
 
 - `true` (default): load every tool listed below.
-- `false`: load only the core set most projects need — `list_connections`, `switch_connection`, `test_connection`, `get_db_info`, `list_tables`, `describe_table` (columns/indexes), `select_query`, and `execute_query`.
+- `false`: load only the core set — `list_connections`, `switch_connection`, `test_connection`, `get_db_info`, `list_schemas`, `list_tables`, `describe_table`, `select_query`, `execute_query`, and `generate_id`.
 
 Example settings block:
 
 ```json
 "settings": {
-  "query_timeout": "30s",
-  "max_connections": 10,
-  "connection_lifetime": "5m",
   "advanced": false
 }
 ```
 
 ## Available Tools
-
-The server provides comprehensive database interaction capabilities through **28 specialized tools**:
 
 ### Connection Management
 - `list_connections` - View all configured database connections
@@ -50,45 +45,46 @@ The server provides comprehensive database interaction capabilities through **28
 
 ### Database Discovery & Metadata
 - `get_db_info` - Access general database information and statistics
+- `list_schemas` - List all schemas in the database
 - `list_tables` - Browse all available tables with metadata
 - `describe_table` - Get detailed table structure, columns, and indexes
-- `analyze_table` - Retrieve table statistics and performance metrics
+- `analyze_table` - Retrieve table statistics and performance metrics *(advanced)*
 
 ### Query Execution
 - `select_query` - Execute SELECT queries and retrieve data
 - `execute_query` - Execute data modification (INSERT, UPDATE, DELETE) and DDL statements
-- `show_query` - Execute SHOW commands for database settings
+- `show_query` - Execute SHOW commands for database settings *(advanced)*
 
 ### Foreign Keys & Relationships
-- `list_foreign_keys` - List all foreign key constraints with referenced tables and actions
-- `get_table_relationships` - Get incoming and outgoing relationships for a table
+- `list_foreign_keys` - List all foreign key constraints with referenced tables and actions *(advanced)*
+- `get_table_relationships` - Get incoming and outgoing relationships for a table *(advanced)*
 
 ### Views
-- `list_views` - List all views (separate from tables)
-- `get_view_definition` - Get SQL definition of a specific view
-- `list_materialized_views` - List materialized views (PostgreSQL only)
+- `list_views` - List all views *(advanced)*
+- `get_view_definition` - Get SQL definition of a specific view *(advanced)*
+- `list_materialized_views` - List materialized views — PostgreSQL only *(advanced)*
 
-### Sequences (PostgreSQL)
-- `list_sequences` - List all sequences in the database
-- `get_sequence_info` - Get detailed sequence information (current value, increment, etc.)
+### Sequences
+- `list_sequences` - List all sequences — PostgreSQL only *(advanced)*
+- `get_sequence_info` - Get detailed sequence information (current value, increment, etc.) — PostgreSQL only *(advanced)*
 
 ### Triggers
-- `list_triggers` - List all triggers with events and timing information
-- `get_trigger_definition` - Get complete trigger SQL definition
+- `list_triggers` - List all triggers with events and timing information *(advanced)*
+- `get_trigger_definition` - Get complete trigger SQL definition *(advanced)*
 
 ### Functions & Stored Procedures
-- `list_functions` - List all user-defined functions and stored procedures
-- `get_function_definition` - Get complete function source code
+- `list_functions` - List all user-defined functions and stored procedures *(advanced)*
+- `get_function_definition` - Get complete function source code *(advanced)*
 
-### Enums (PostgreSQL)
-- `list_enums` - List all enum types in the database
-- `get_enum_values` - Get all possible values for a specific enum type
+### Enums
+- `list_enums` - List all enum types — PostgreSQL only
+- `get_enum_values` - Get all possible values for a specific enum type — PostgreSQL only
 
 ### Column Search
-- `find_column` - Search for columns by name across all tables (supports partial matching)
+- `find_column` - Search for columns by name across all tables (supports partial matching) *(advanced)*
 
 ### Constraints
-- `list_constraints` - List all constraints (PRIMARY KEY, FOREIGN KEY, UNIQUE, CHECK)
+- `list_constraints` - List all constraints (PRIMARY KEY, FOREIGN KEY, UNIQUE, CHECK) *(advanced)*
 
 ### Utilities
 - `generate_id` - Generate unique identifiers (UUID v1-v7, CUID, CUID2)

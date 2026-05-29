@@ -21,10 +21,7 @@ type LoggingConfig struct {
 }
 
 type Settings struct {
-	QueryTimeout       string `json:"query_timeout"`
-	MaxConnections     int    `json:"max_connections"`
-	ConnectionLifetime string `json:"connection_lifetime"`
-	AdvancedTools      *bool  `json:"advanced"`
+	AdvancedTools *bool `json:"advanced"`
 }
 
 type Config struct {
@@ -101,15 +98,6 @@ func loadConfigFromFile(path string) (*Config, error) {
 		config.Logging.MaxSizeMB = 10
 	}
 
-	if config.Settings.QueryTimeout == "" {
-		config.Settings.QueryTimeout = "30s"
-	}
-	if config.Settings.MaxConnections == 0 {
-		config.Settings.MaxConnections = 10
-	}
-	if config.Settings.ConnectionLifetime == "" {
-		config.Settings.ConnectionLifetime = "5m"
-	}
 	if config.Settings.AdvancedTools == nil {
 		defaultAdvanced := true
 		config.Settings.AdvancedTools = &defaultAdvanced

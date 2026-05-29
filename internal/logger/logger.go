@@ -11,48 +11,31 @@ import (
 	"github.com/AbdelilahOu/DBMcp/internal/config"
 )
 
-type LogLevel int
-
-const (
-	DEBUG LogLevel = iota
-	INFO
-	WARN
-	ERROR
-)
-
-var levelNames = map[LogLevel]string{
-	DEBUG: "DEBUG",
-	INFO:  "INFO",
-	WARN:  "WARN",
-	ERROR: "ERROR",
-}
-
 type Logger struct {
-	slogger  *slog.Logger
-	logLevel LogLevel
-	logFile  *os.File
+	slogger *slog.Logger
+	logFile *os.File
 }
 
-func ParseLogLevel(level string) LogLevel {
+type Config struct {
+	Level      slog.Level
+	OutputFile string
+	MaxSize    int64
+	Console    bool
+}
+
+var globalLogger *Logger
+
+func ParseLogLevel(level string) slog.Level {
 	switch level {
 	case "DEBUG", "debug":
-		return DEBUG
-	case "INFO", "info":
-		return INFO
+		return slog.LevelDebug
 	case "WARN", "warn", "WARNING", "warning":
-		return WARN
+		return slog.LevelWarn
 	case "ERROR", "error":
-		return ERROR
+		return slog.LevelError
 	default:
-		return INFO
+		return slog.LevelInfo
 	}
-}
-
-func LogLevelString(level LogLevel) string {
-	if name, exists := levelNames[level]; exists {
-		return name
-	}
-	return "INFO"
 }
 
 func ConfigFromLoggingConfig(logCfg config.LoggingConfig) Config {
@@ -64,15 +47,6 @@ func ConfigFromLoggingConfig(logCfg config.LoggingConfig) Config {
 	}
 }
 
-type Config struct {
-	Level      LogLevel
-	OutputFile string
-	MaxSize    int64
-	Console    bool
-}
-
-var globalLogger *Logger
-
 func Initialize(cfg Config) error {
 	logger, err := NewLogger(cfg)
 	if err != nil {
@@ -83,9 +57,7 @@ func Initialize(cfg Config) error {
 }
 
 func NewLogger(cfg Config) (*Logger, error) {
-	logger := &Logger{
-		logLevel: cfg.Level,
-	}
+	logger := &Logger{}
 
 	var writers []io.Writer
 
@@ -114,18 +86,16 @@ func NewLogger(cfg Config) (*Logger, error) {
 	}
 
 	var writer io.Writer
-	if len(writers) == 1 {
-		writer = writers[0]
-	} else if len(writers) == 0 {
+	switch len(writers) {
+	case 0:
 		writer = io.Discard
-	} else {
+	case 1:
+		writer = writers[0]
+	default:
 		writer = io.MultiWriter(writers...)
 	}
 
-	opts := &slog.HandlerOptions{
-		Level: slog.Level(-4),
-	}
-	handler := slog.NewTextHandler(writer, opts)
+	handler := slog.NewTextHandler(writer, &slog.HandlerOptions{Level: cfg.Level})
 	logger.slogger = slog.New(handler)
 
 	return logger, nil
@@ -158,58 +128,47 @@ func (l *Logger) Close() error {
 	return nil
 }
 
-func (l *Logger) shouldLog(level LogLevel) bool {
-	return level >= l.logLevel
-}
-
-func (l *Logger) log(level LogLevel, msg string, fields map[string]interface{}) {
-	if !l.shouldLog(level) {
-		return
-	}
-
-	timestamp := time.Now().UTC().Format("2006-01-02 15:04:05")
-	logLine := fmt.Sprintf("[%s] %s: %s", timestamp, levelNames[level], msg)
-
+func toAttrs(fields map[string]interface{}) []any {
+	attrs := make([]any, 0, len(fields)*2)
 	for k, v := range fields {
-		logLine += fmt.Sprintf(" %s=%v", k, v)
+		attrs = append(attrs, k, v)
 	}
-
-	l.slogger.Info(logLine)
+	return attrs
 }
 
 func (l *Logger) Debug(msg string, fields ...map[string]interface{}) {
-	fieldMap := make(map[string]interface{})
 	if len(fields) > 0 {
-		fieldMap = fields[0]
+		l.slogger.Debug(msg, toAttrs(fields[0])...)
+	} else {
+		l.slogger.Debug(msg)
 	}
-	l.log(DEBUG, msg, fieldMap)
 }
 
 func (l *Logger) Info(msg string, fields ...map[string]interface{}) {
-	fieldMap := make(map[string]interface{})
 	if len(fields) > 0 {
-		fieldMap = fields[0]
+		l.slogger.Info(msg, toAttrs(fields[0])...)
+	} else {
+		l.slogger.Info(msg)
 	}
-	l.log(INFO, msg, fieldMap)
 }
 
 func (l *Logger) Warn(msg string, fields ...map[string]interface{}) {
-	fieldMap := make(map[string]interface{})
 	if len(fields) > 0 {
-		fieldMap = fields[0]
+		l.slogger.Warn(msg, toAttrs(fields[0])...)
+	} else {
+		l.slogger.Warn(msg)
 	}
-	l.log(WARN, msg, fieldMap)
 }
 
 func (l *Logger) Error(msg string, err error, fields ...map[string]interface{}) {
-	fieldMap := make(map[string]interface{})
+	attrs := make(map[string]interface{})
 	if len(fields) > 0 {
-		fieldMap = fields[0]
+		attrs = fields[0]
 	}
 	if err != nil {
-		fieldMap["error"] = err.Error()
+		attrs["error"] = err.Error()
 	}
-	l.log(ERROR, msg, fieldMap)
+	l.slogger.Error(msg, toAttrs(attrs)...)
 }
 
 func Debug(msg string, fields ...map[string]interface{}) {
@@ -236,41 +195,43 @@ func Error(msg string, err error, fields ...map[string]interface{}) {
 	}
 }
 
-func LogToolCall(toolName string, params interface{}, result interface{}, err error) {
+func LogToolCall(toolName string, err error) {
 	if err != nil {
-		Error(fmt.Sprintf("Tool call failed: %s", toolName), err)
+		Error("tool call failed", err, map[string]interface{}{"tool": toolName})
 	} else {
-		Info(fmt.Sprintf("Tool call completed: %s", toolName))
+		Info("tool call completed", map[string]interface{}{"tool": toolName})
 	}
 }
 
 func LogDatabaseOperation(operation, query string, rowsAffected int64, err error) {
-	sanitizedQuery := query
-	if len(sanitizedQuery) > 100 {
-		sanitizedQuery = sanitizedQuery[:100] + "..."
+	if len(query) > 100 {
+		query = query[:100] + "..."
 	}
-
+	fields := map[string]interface{}{
+		"operation": operation,
+		"query":     query,
+	}
 	if err != nil {
-		Error(fmt.Sprintf("%s operation failed: %s", operation, sanitizedQuery), err)
-	} else {
-		if rowsAffected > 0 {
-			Info(fmt.Sprintf("%s operation completed: %s (%d rows affected)", operation, sanitizedQuery, rowsAffected))
-		} else {
-			Info(fmt.Sprintf("%s operation completed: %s", operation, sanitizedQuery))
-		}
+		Error("database operation failed", err, fields)
+		return
 	}
+	if rowsAffected > 0 {
+		fields["rows_affected"] = rowsAffected
+	}
+	Info("database operation completed", fields)
 }
 
 func LogConnectionEvent(event, connectionName, dbType string, err error) {
-	if err != nil {
-		Error(fmt.Sprintf("Connection event failed: %s to %s (%s)", event, connectionName, dbType), err)
-	} else {
-		Info(fmt.Sprintf("Connection event completed: %s to %s (%s)", event, connectionName, dbType))
+	fields := map[string]interface{}{
+		"event":      event,
+		"connection": connectionName,
+		"db_type":    dbType,
 	}
-}
-
-func GetGlobalLogger() *Logger {
-	return globalLogger
+	if err != nil {
+		Error("connection event failed", err, fields)
+	} else {
+		Info("connection event completed", fields)
+	}
 }
 
 func Shutdown() error {
