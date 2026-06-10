@@ -38,8 +38,6 @@ func runStdioServer(cmd *cobra.Command, args []string) error {
 	connection, _ := cmd.Flags().GetString("connection")
 	configPath, _ := cmd.Flags().GetString("config")
 
-	var initialConnection string
-
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
@@ -49,22 +47,12 @@ func runStdioServer(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("config loaded but contains no connections")
 	}
 
-	if connection != "" {
-		if _, exists := cfg.GetConnection(connection); exists {
-			fmt.Fprintf(os.Stderr, "Config loaded. Will initialize connection: %s\n", connection)
-			initialConnection = connection
-		} else {
-			return fmt.Errorf("connection '%s' not found in config", connection)
-		}
-	} else if cfg.DefaultConnection != "" {
-		if _, exists := cfg.GetConnection(cfg.DefaultConnection); exists {
-			fmt.Fprintf(os.Stderr, "Config loaded. Will initialize default connection: %s\n", cfg.DefaultConnection)
-			initialConnection = cfg.DefaultConnection
-		} else {
-			fmt.Fprintf(os.Stderr, "Config loaded. Default connection '%s' not found, starting without initial connection.\n", cfg.DefaultConnection)
-		}
-	} else {
-		fmt.Fprintln(os.Stderr, "Config loaded. Use list_connections and switch_connection tools to connect to a database.")
+	initialConnection, message, err := resolveInitialConnection(cfg, connection)
+	if err != nil {
+		return err
+	}
+	if message != "" {
+		fmt.Fprintln(os.Stderr, message)
 	}
 
 	return server.RunStdioServer(server.StdioServerConfig{
@@ -72,4 +60,45 @@ func runStdioServer(cmd *cobra.Command, args []string) error {
 		InitialConnection: initialConnection,
 		Config:            cfg,
 	})
+}
+
+func resolveInitialConnection(cfg *config.Config, requested string) (string, string, error) {
+	if requested != "" {
+		if _, exists := cfg.GetConnection(requested); !exists {
+			return "", "", fmt.Errorf("connection '%s' not found in config", requested)
+		}
+		return requested, fmt.Sprintf("Config loaded. Will initialize connection: %s", requested), nil
+	}
+
+	if cfg.DefaultConnection != "" {
+		if _, exists := cfg.GetConnection(cfg.DefaultConnection); exists {
+			return cfg.DefaultConnection, fmt.Sprintf("Config loaded. Will initialize default connection: %s", cfg.DefaultConnection), nil
+		}
+
+		if name, ok := onlyConnectionName(cfg); ok {
+			message := fmt.Sprintf("Config loaded. Default connection '%s' not found. Will initialize only connection: %s", cfg.DefaultConnection, name)
+			return name, message, nil
+		}
+
+		message := fmt.Sprintf("Config loaded. Default connection '%s' not found, starting without initial connection.", cfg.DefaultConnection)
+		return "", message, nil
+	}
+
+	if name, ok := onlyConnectionName(cfg); ok {
+		return name, fmt.Sprintf("Config loaded. Will initialize only connection: %s", name), nil
+	}
+
+	return "", "Config loaded. Use list_connections and switch_connection tools to connect to a database.", nil
+}
+
+func onlyConnectionName(cfg *config.Config) (string, bool) {
+	if len(cfg.Connections) != 1 {
+		return "", false
+	}
+
+	for name := range cfg.Connections {
+		return name, true
+	}
+
+	return "", false
 }
