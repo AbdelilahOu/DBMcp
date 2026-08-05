@@ -100,7 +100,7 @@ func initializeConnection(conn config.Connection, connectionName string) (driver
 		drv = &driver.SqliteDriver{}
 	}
 
-	sessionState := state.SetSession("default", &state.DBSessionState{
+	sessionState := state.SetSession(&state.DBSessionState{
 		Conn:   dbClient.DB,
 		Driver: drv,
 	})

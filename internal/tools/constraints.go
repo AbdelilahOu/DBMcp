@@ -35,7 +35,7 @@ func GetListConstraintsTool() *ToolDefinition[ListConstraintsInput, ListConstrai
 		"list_constraints",
 		"List constraints in DB or table. Returns PKs, FKs, unique, check constraints. Shows data integrity rules. Use list_foreign_keys for detailed FK info.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListConstraintsInput) (*mcp.CallToolResult, ListConstraintsOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, ListConstraintsOutput{}, err
 			}

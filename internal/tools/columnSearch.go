@@ -35,7 +35,7 @@ func GetFindColumnTool() *ToolDefinition[FindColumnInput, FindColumnOutput] {
 		"find_column",
 		"Search columns by name across tables. Supports exact/partial match. Returns table, schema, column, type, position. For locating columns in large schemas.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input FindColumnInput) (*mcp.CallToolResult, FindColumnOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, FindColumnOutput{}, err
 			}

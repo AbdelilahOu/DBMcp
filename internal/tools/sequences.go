@@ -45,7 +45,7 @@ func GetListSequencesTool() *ToolDefinition[ListSequencesInput, ListSequencesOut
 		"list_sequences",
 		"List sequences. For auto-increment values. Returns names, schemas. Use get_sequence_info for details. Note: MySQL uses AUTO_INCREMENT.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListSequencesInput) (*mcp.CallToolResult, ListSequencesOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, ListSequencesOutput{}, err
 			}
@@ -82,7 +82,7 @@ func GetSequenceInfoTool() *ToolDefinition[GetSequenceInfoInput, GetSequenceInfo
 		"get_sequence_info",
 		"Get sequence details. Returns current/start value, increment, min/max, cache, cycle. For troubleshooting auto-increment.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetSequenceInfoInput) (*mcp.CallToolResult, GetSequenceInfoOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, GetSequenceInfoOutput{}, err
 			}

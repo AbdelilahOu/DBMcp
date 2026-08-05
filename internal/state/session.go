@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/AbdelilahOu/DBMcp/internal/client"
 	"github.com/AbdelilahOu/DBMcp/internal/driver"
-	"github.com/google/uuid"
 )
 
 type DBSessionState struct {
@@ -16,60 +14,30 @@ type DBSessionState struct {
 }
 
 var (
-	sessions = make(map[string]*DBSessionState)
-	mu       sync.RWMutex
+	current *DBSessionState
+	mu      sync.RWMutex
 )
 
-func GetSession(sessionID string) *DBSessionState {
+func GetSession() *DBSessionState {
 	mu.RLock()
 	defer mu.RUnlock()
-	s, ok := sessions[sessionID]
-	if !ok || s == nil {
+	if current == nil {
 		return nil
 	}
 
-	sessionCopy := *s
+	sessionCopy := *current
 	return &sessionCopy
 }
 
-func CreateSession(sessionID string, globalClient *client.DBClient) *DBSessionState {
-	id := sessionID
-	if id == "" {
-		id = uuid.New().String()
-	}
-
-	nextState := &DBSessionState{}
-	if globalClient == nil {
-		return SetSession(id, nextState)
-	}
-
-	conn := globalClient.DB
-	if conn == nil {
-		return nil
-	}
-	if err := conn.Ping(); err != nil {
-		return nil
-	}
-
-	nextState.Conn = conn
-	return SetSession(id, nextState)
-}
-
-func SetSession(sessionID string, nextState *DBSessionState) *DBSessionState {
+func SetSession(nextState *DBSessionState) *DBSessionState {
 	if nextState == nil {
 		return nil
 	}
 
-	id := sessionID
-	if id == "" {
-		id = uuid.New().String()
-	}
-
 	mu.Lock()
-	oldState := sessions[id]
-
+	oldState := current
 	stateCopy := *nextState
-	sessions[id] = &stateCopy
+	current = &stateCopy
 	mu.Unlock()
 
 	if oldState != nil && oldState.Conn != nil && oldState.Conn != stateCopy.Conn {
@@ -79,55 +47,22 @@ func SetSession(sessionID string, nextState *DBSessionState) *DBSessionState {
 	return &stateCopy
 }
 
-func GetActiveSession(sessionID string) (*DBSessionState, error) {
-	if sessionID == "" {
-		sessionID = "default"
-	}
-
-	sessionState := GetSession(sessionID)
-	if sessionState == nil {
-		return nil, fmt.Errorf("no active DB connection. Use switch_connection tool to connect to a database first")
-	}
-
-	if sessionState.Conn == nil {
+func GetActiveSession() (*DBSessionState, error) {
+	sessionState := GetSession()
+	if sessionState == nil || sessionState.Conn == nil {
 		return nil, fmt.Errorf("no active DB connection. Use switch_connection tool to connect to a database first")
 	}
 
 	return sessionState, nil
 }
 
-func CloseSession(sessionID string) {
-	mu.Lock()
-	s, ok := sessions[sessionID]
-	if ok {
-		delete(sessions, sessionID)
-	}
-	mu.Unlock()
-
-	if ok && s != nil && s.Conn != nil {
-		_ = s.Conn.Close()
-	}
-}
-
 func CloseAllSessions() {
 	mu.Lock()
-	currentSessions := sessions
-	sessions = make(map[string]*DBSessionState)
+	s := current
+	current = nil
 	mu.Unlock()
 
-	closed := make(map[*sql.DB]struct{})
-	for _, s := range currentSessions {
-		if s == nil || s.Conn == nil {
-			continue
-		}
-		if _, exists := closed[s.Conn]; exists {
-			continue
-		}
-		closed[s.Conn] = struct{}{}
+	if s != nil && s.Conn != nil {
 		_ = s.Conn.Close()
 	}
-}
-
-func OnDisconnect(sessionID string) {
-	CloseSession(sessionID)
 }

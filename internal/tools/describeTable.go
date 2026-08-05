@@ -40,7 +40,7 @@ func GetDescribeTableTool() *ToolDefinition[DescribeTableInput, DescribeTableOut
 		"describe_table",
 		"Get table schema: columns (names, types, nullability, PKs, defaults), indexes. For schema design, not data/stats. Use analyze_table for row counts/sizes.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input DescribeTableInput) (*mcp.CallToolResult, DescribeTableOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, DescribeTableOutput{}, err
 			}

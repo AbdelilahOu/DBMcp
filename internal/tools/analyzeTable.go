@@ -34,7 +34,7 @@ func GetAnalyzeTableTool() *ToolDefinition[AnalyzeTableInput, AnalyzeTableOutput
 		"analyze_table",
 		"PREFERRED for table metadata: row count, sizes, column info. Use instead of SELECT COUNT(*). Optimized, no full table scans.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeTableInput) (*mcp.CallToolResult, AnalyzeTableOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, AnalyzeTableOutput{}, err
 			}

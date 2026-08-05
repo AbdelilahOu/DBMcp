@@ -52,7 +52,7 @@ func GetListViewsTool() *ToolDefinition[ListViewsInput, ListViewsOutput] {
 		"list_views",
 		"List views in DB or schema. Returns names, schemas. Views are virtual tables. Use get_view_definition for SQL.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListViewsInput) (*mcp.CallToolResult, ListViewsOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, ListViewsOutput{}, err
 			}
@@ -89,7 +89,7 @@ func GetViewDefinitionTool() *ToolDefinition[GetViewDefinitionInput, GetViewDefi
 		"get_view_definition",
 		"Get view SQL definition. Returns complete SELECT statement showing view construction.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetViewDefinitionInput) (*mcp.CallToolResult, GetViewDefinitionOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, GetViewDefinitionOutput{}, err
 			}
@@ -118,7 +118,7 @@ func GetListMaterializedViewsTool() *ToolDefinition[ListMaterializedViewsInput, 
 		"list_materialized_views",
 		"List materialized views. Store results physically unlike regular views. Note: MySQL/SQLite not supported.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListMaterializedViewsInput) (*mcp.CallToolResult, ListMaterializedViewsOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, ListMaterializedViewsOutput{}, err
 			}

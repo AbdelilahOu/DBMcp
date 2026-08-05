@@ -120,7 +120,7 @@ func GetSwitchConnectionTool(cfg *config.Config) *ToolDefinition[SwitchConnectio
 				dbDriver = &driver.SqliteDriver{}
 			}
 
-			sessionState := state.SetSession("default", &state.DBSessionState{
+			sessionState := state.SetSession(&state.DBSessionState{
 				Conn:   dbClient.DB,
 				Driver: dbDriver,
 			})
@@ -194,7 +194,7 @@ func GetTestConnectionTool(cfg *config.Config) *ToolDefinition[TestConnectionInp
 
 				connectionName = input.Connection
 			} else {
-				sessionState := state.GetSession("default")
+				sessionState := state.GetSession()
 				if sessionState == nil || sessionState.Conn == nil {
 					output := TestConnectionOutput{
 						Success:    false,

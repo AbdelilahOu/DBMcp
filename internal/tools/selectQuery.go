@@ -25,7 +25,7 @@ func GetSelectQueryTool() *ToolDefinition[SelectQueryInput, SelectQueryOutput] {
 		"select_query",
 		"Execute SELECT queries for actual data rows. Supports WHERE, joins. DO NOT use for row counts (analyze_table) or metadata (describe_table). Data content only.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input SelectQueryInput) (*mcp.CallToolResult, SelectQueryOutput, error) {
-			sessionState, err := state.GetActiveSession("default")
+			sessionState, err := state.GetActiveSession()
 			if err != nil {
 				return nil, SelectQueryOutput{}, err
 			}

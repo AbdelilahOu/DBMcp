@@ -26,7 +26,7 @@ func GetEnumValuesTool() *ToolDefinition[GetEnumValuesInput, GetEnumValuesOutput
 		"get_enum_values",
 		"Get enum values for type. Returns name, schema, ordered list. Note: MySQL has no standalone ENUMs - use describe_table for column-level ENUMs.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetEnumValuesInput) (*mcp.CallToolResult, GetEnumValuesOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, GetEnumValuesOutput{}, err
 			}
@@ -73,7 +73,7 @@ func GetListEnumsTool() *ToolDefinition[ListEnumsInput, ListEnumsOutput] {
 		"list_enums",
 		"List enum types in DB or schema. Returns names, schemas. Use get_enum_values for values. Note: MySQL has no standalone ENUMs.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListEnumsInput) (*mcp.CallToolResult, ListEnumsOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, ListEnumsOutput{}, err
 			}

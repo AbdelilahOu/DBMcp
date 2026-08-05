@@ -25,7 +25,7 @@ func GetListSchemasTool() *ToolDefinition[ListSchemasInput, ListSchemasOutput] {
 		"list_schemas",
 		"List available schemas (PostgreSQL), databases (MySQL), or attached databases (SQLite). Use this to discover schema names before passing them to other tools.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListSchemasInput) (*mcp.CallToolResult, ListSchemasOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, ListSchemasOutput{}, err
 			}

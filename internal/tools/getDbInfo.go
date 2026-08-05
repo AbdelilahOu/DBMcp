@@ -24,7 +24,7 @@ func GetDbInfoTool() *ToolDefinition[GetDBInfoInput, GetDBInfoOutput] {
 		"get_db_info",
 		"Get DB overview: name, version, schemas, table count. Entry point for unfamiliar DBs. Use list_tables/describe_table/analyze_table for table details.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetDBInfoInput) (*mcp.CallToolResult, GetDBInfoOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, GetDBInfoOutput{}, err
 			}

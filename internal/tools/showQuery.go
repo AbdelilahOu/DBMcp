@@ -25,7 +25,7 @@ func GetShowQueryTool() *ToolDefinition[ShowQueryInput, ShowQueryOutput] {
 		"show_query",
 		"Execute SHOW commands. MySQL: SHOW TABLES/DATABASES/COLUMNS. PostgreSQL: SHOW server_version/search_path. For DB-agnostic ops prefer list_tables/describe_table/get_db_info.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ShowQueryInput) (*mcp.CallToolResult, ShowQueryOutput, error) {
-			sessionState, err := state.GetActiveSession("default")
+			sessionState, err := state.GetActiveSession()
 			if err != nil {
 				return nil, ShowQueryOutput{}, err
 			}

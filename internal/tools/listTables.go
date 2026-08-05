@@ -29,7 +29,7 @@ func GetListTablesTool() *ToolDefinition[ListTablesInput, ListTablesOutput] {
 		"list_tables",
 		"List all tables/views in DB or schema. Returns names, schemas, types. Use describe_table/analyze_table for details.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListTablesInput) (*mcp.CallToolResult, ListTablesOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, ListTablesOutput{}, err
 			}

@@ -25,7 +25,7 @@ func GetExecuteQueryTool() *ToolDefinition[ExecuteQueryInput, ExecuteQueryOutput
 		"execute_query",
 		"Execute INSERT, UPDATE, DELETE, CREATE, ALTER, DROP. Changes DB state. DO NOT use for reading (select_query) or metadata (describe_table, analyze_table, list_tables).",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ExecuteQueryInput) (*mcp.CallToolResult, ExecuteQueryOutput, error) {
-			sessionState, err := state.GetActiveSession("default")
+			sessionState, err := state.GetActiveSession()
 			if err != nil {
 				return nil, ExecuteQueryOutput{}, err
 			}

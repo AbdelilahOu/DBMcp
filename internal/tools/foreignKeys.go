@@ -58,7 +58,7 @@ func GetListForeignKeysTool() *ToolDefinition[ListForeignKeysInput, ListForeignK
 		"list_foreign_keys",
 		"List FK constraints in DB or table. Returns columns, referenced tables, actions (CASCADE, SET NULL, etc.). Shows relationships and referential integrity.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListForeignKeysInput) (*mcp.CallToolResult, ListForeignKeysOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, ListForeignKeysOutput{}, err
 			}
@@ -105,7 +105,7 @@ func GetTableRelationshipsTool() *ToolDefinition[GetTableRelationshipsInput, Get
 		"get_table_relationships",
 		"Get all relationships for table: outgoing FKs (refs other tables) and incoming FKs (other tables ref this). Complete relationship view.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetTableRelationshipsInput) (*mcp.CallToolResult, GetTableRelationshipsOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, GetTableRelationshipsOutput{}, err
 			}

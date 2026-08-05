@@ -47,7 +47,7 @@ func GetListTriggersTool() *ToolDefinition[ListTriggersInput, ListTriggersOutput
 		"list_triggers",
 		"List triggers in DB or table. Automated actions on INSERT/UPDATE/DELETE. Returns names, tables, events, timing (BEFORE/AFTER). Use get_trigger_definition for SQL.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListTriggersInput) (*mcp.CallToolResult, ListTriggersOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, ListTriggersOutput{}, err
 			}
@@ -84,7 +84,7 @@ func GetTriggerDefinitionTool() *ToolDefinition[GetTriggerDefinitionInput, GetTr
 		"get_trigger_definition",
 		"Get trigger SQL definition. Returns complete definition: function/body, event type, timing, table. Shows implementation.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetTriggerDefinitionInput) (*mcp.CallToolResult, GetTriggerDefinitionOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, GetTriggerDefinitionOutput{}, err
 			}

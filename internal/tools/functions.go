@@ -44,7 +44,7 @@ func GetListFunctionsTool() *ToolDefinition[ListFunctionsInput, ListFunctionsOut
 		"list_functions",
 		"List user-defined functions/procedures. Returns names, schemas, return types, language. Use get_function_definition for source code.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input ListFunctionsInput) (*mcp.CallToolResult, ListFunctionsOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, ListFunctionsOutput{}, err
 			}
@@ -81,7 +81,7 @@ func GetFunctionDefinitionTool() *ToolDefinition[GetFunctionDefinitionInput, Get
 		"get_function_definition",
 		"Get function source code and definition. Returns signature, params, return type, language, full source. Shows implementation.",
 		func(ctx context.Context, req *mcp.CallToolRequest, input GetFunctionDefinitionInput) (*mcp.CallToolResult, GetFunctionDefinitionOutput, error) {
-			session, err := state.GetActiveSession("default")
+			session, err := state.GetActiveSession()
 			if err != nil {
 				return nil, GetFunctionDefinitionOutput{}, err
 			}
